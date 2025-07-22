@@ -1,0 +1,51 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - MONGODB_URI=mongodb://mongo:27017/ai-personas
+    depends_on:
+      - mongo
+    volumes:
+      - ./src:/app/src
+      - ./public:/app/public
+      - ./logs:/app/logs
+    networks:
+      - ai-personas-network
+
+  mongo:
+    image: mongo:7.0
+    ports:
+      - "27017:27017"
+    environment:
+      - MONGO_INITDB_DATABASE=ai-personas
+    volumes:
+      - mongo_data:/data/db
+      - ./mongo-init:/docker-entrypoint-initdb.d
+    networks:
+      - ai-personas-network
+
+  mongo-express:
+    image: mongo-express:1.0.0
+    ports:
+      - "8081:8081"
+    environment:
+      - ME_CONFIG_MONGODB_SERVER=mongo
+      - ME_CONFIG_MONGODB_PORT=27017
+      - ME_CONFIG_BASICAUTH_USERNAME=admin
+      - ME_CONFIG_BASICAUTH_PASSWORD=admin123
+    depends_on:
+      - mongo
+    networks:
+      - ai-personas-network
+
+volumes:
+  mongo_data:
+
+networks:
+  ai-personas-network:
+    driver: bridge 

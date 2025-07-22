@@ -1,0 +1,40 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "strict": true,
+    "forceConsistentCasingInFileNames": true,
+    "noFallthroughCasesInSwitch": true,
+    "module": "ESNext",
+    "moduleResolution": "node",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "jsx": "react-jsx",
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"],
+      "@/components/*": ["src/client/components/*"],
+      "@/hooks/*": ["src/client/hooks/*"],
+      "@/utils/*": ["src/client/utils/*"],
+      "@/services/*": ["src/server/services/*"],
+      "@/models/*": ["src/server/models/*"],
+      "@/routes/*": ["src/server/routes/*"],
+      "@/middleware/*": ["src/server/middleware/*"],
+      "@/config/*": ["src/server/config/*"]
+    }
+  },
+  "include": [
+    "src/**/*",
+    "tests/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "build"
+  ]
+} 
