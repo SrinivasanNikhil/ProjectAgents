@@ -5,13 +5,17 @@ import morgan from 'morgan';
 import compression from 'compression';
 import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
+import { createServer } from 'http';
+import path from 'path';
 
 // Import configurations
 import { connectDatabase } from './config/database';
 import { logger, stream } from './config/logger';
+import { webSocketManager } from './config/websocket';
 
 // Import routes
 import authRoutes from './routes/auth';
+import artifactRoutes from './routes/artifacts';
 
 // Import middleware
 import { authenticateToken, optionalAuth } from './middleware/auth';
@@ -27,6 +31,7 @@ import {
 dotenv.config();
 
 const app = express();
+const server = createServer(app);
 const PORT = process.env.PORT || 3000;
 
 // Security middleware
@@ -66,6 +71,16 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // Logging middleware
 app.use(morgan('combined', { stream }));
 
+// Static file serving for local uploads
+if (
+  process.env.FILE_STORAGE_PROVIDER === 'local' ||
+  !process.env.FILE_STORAGE_PROVIDER
+) {
+  const uploadsPath =
+    process.env.LOCAL_UPLOAD_DIR || path.join(process.cwd(), 'uploads');
+  app.use('/uploads', express.static(uploadsPath));
+}
+
 // Rate limiting for all routes
 const generalLimiter = rateLimit({
   windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000'), // 15 minutes
@@ -104,6 +119,7 @@ app.get('/health', async (req, res) => {
 
 // API routes
 app.use('/api/auth', authRoutes);
+app.use('/api/artifacts', artifactRoutes);
 
 // Protected routes example
 app.get('/api/protected', authenticateToken, (req, res) => {
@@ -290,11 +306,16 @@ const startServer = async () => {
     await connectDatabase();
     logger.info('Database connected successfully');
 
+    // Initialize WebSocket server
+    webSocketManager.initialize(server);
+    logger.info('WebSocket server initialized');
+
     // Start listening
-    app.listen(PORT, () => {
+    server.listen(PORT, () => {
       logger.info(`Server running on port ${PORT}`);
       logger.info(`Environment: ${process.env.NODE_ENV || 'development'}`);
       logger.info(`Health check: http://localhost:${PORT}/health`);
+      logger.info(`WebSocket endpoint: ws://localhost:${PORT}`);
     });
   } catch (error) {
     logger.error('Failed to start server:', error);

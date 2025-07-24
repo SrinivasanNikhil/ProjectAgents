@@ -4,16 +4,22 @@
 
 ### Backend Infrastructure
 
-- `src/server/index.ts` - Main server entry point with Express app setup, middleware configuration, and authentication routes
+- `src/server/index.ts` - Main server entry point with Express app setup, middleware configuration, authentication routes, and WebSocket server integration
 - `src/server/index.test.ts` - Unit tests for server setup
 - `src/server/config/database.ts` - Database connection and configuration
 - `src/server/config/database.test.ts` - Unit tests for database configuration
+- `src/server/config/websocket.ts` - WebSocket server configuration with authentication, rate limiting, and real-time communication setup
+- `src/server/config/websocket.test.ts` - Unit tests for WebSocket configuration
+- `src/server/config/fileStorage.ts` - File storage configuration for S3 and local storage
+- `src/server/config/fileStorage.test.ts` - Unit tests for file storage configuration
 - `src/server/config/ai.ts` - AI service configuration and setup
 - `src/server/config/ai.test.ts` - Unit tests for AI configuration
 - `src/server/middleware/auth.ts` - Authentication middleware with JWT token verification, password validation, and user authentication
 - `src/server/middleware/auth.test.ts` - Unit tests for authentication middleware
 - `src/server/middleware/roleCheck.ts` - Role-based access control middleware
 - `src/server/middleware/roleCheck.test.ts` - Unit tests for role middleware
+- `src/server/middleware/fileUpload.ts` - File upload middleware with validation and error handling
+- `src/server/middleware/fileUpload.test.ts` - Unit tests for file upload middleware
 
 ### Database Models
 
@@ -44,7 +50,7 @@
 - `src/server/routes/analytics.test.ts` - Unit tests for analytics routes
 - `src/server/routes/milestones.ts` - Milestone and assessment routes
 - `src/server/routes/milestones.test.ts` - Unit tests for milestone routes
-- `src/server/routes/artifacts.ts` - File upload and artifact routes
+- `src/server/routes/artifacts.ts` - File upload and artifact routes with comprehensive CRUD operations
 - `src/server/routes/artifacts.test.ts` - Unit tests for artifact routes
 - `src/server/routes/admin.ts` - System administration routes
 - `src/server/routes/admin.test.ts` - Unit tests for admin routes
@@ -55,13 +61,13 @@
 - `src/server/services/aiService.test.ts` - Unit tests for AI service
 - `src/server/services/personaService.ts` - Persona generation and management logic
 - `src/server/services/personaService.test.ts` - Unit tests for persona service
-- `src/server/services/chatService.ts` - Real-time chat and messaging logic
+- `src/server/services/chatService.ts` - Real-time chat and messaging logic with WebSocket integration, message persistence, and conversation management
 - `src/server/services/chatService.test.ts` - Unit tests for chat service
 - `src/server/services/analyticsService.ts` - Analytics and reporting logic
 - `src/server/services/analyticsService.test.ts` - Unit tests for analytics service
 - `src/server/services/milestoneService.ts` - Milestone and assessment logic
 - `src/server/services/milestoneService.test.ts` - Unit tests for milestone service
-- `src/server/services/fileService.ts` - File upload and storage logic
+- `src/server/services/fileService.ts` - File upload and storage logic with S3 and local storage support
 - `src/server/services/fileService.test.ts` - Unit tests for file service
 
 ### Frontend Components
@@ -141,8 +147,8 @@
   - [x] 1.4 Create database models with relationships and validation
   - [x] 1.5 Set up authentication system and user management
   - [x] 1.6 Configure role-based access control (RBAC)
-  - [ ] 1.7 Set up WebSocket server for real-time communication
-  - [ ] 1.8 Configure file storage system for artifacts
+  - [x] 1.7 Set up WebSocket server for real-time communication
+  - [x] 1.8 Configure file storage system for artifacts
   - [ ] 1.9 Set up logging and error handling infrastructure
 
 - [ ] 2.0 Persona Generation and Management System

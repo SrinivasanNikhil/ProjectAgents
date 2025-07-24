@@ -56,6 +56,18 @@ export interface IArtifact extends Document {
   status: 'active' | 'archived' | 'deleted';
   createdAt: Date;
   updatedAt: Date;
+  // Instance methods
+  incrementViewCount(): Promise<IArtifact>;
+  incrementDownloadCount(): Promise<IArtifact>;
+  createNewVersion(
+    newFileInfo: any,
+    uploadedBy: Types.ObjectId
+  ): Promise<IArtifact>;
+  hasAccess(userId: Types.ObjectId): boolean;
+  canEdit(userId: Types.ObjectId): boolean;
+  // Virtual properties
+  fileSizeFormatted: string;
+  fileTypeIcon: string;
 }
 
 const artifactSchema = new Schema<IArtifact>(

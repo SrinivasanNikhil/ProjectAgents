@@ -49,5 +49,4 @@ module.exports = {
   },
   // Add timeouts to prevent hanging tests
   testTimeout: 10000,
-  setupFilesAfterEnv: ['<rootDir>/src/setupTests.ts'],
 };
