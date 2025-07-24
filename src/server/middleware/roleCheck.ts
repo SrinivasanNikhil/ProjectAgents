@@ -31,7 +31,8 @@ export type Permission =
   | 'analytics:read'
   | 'analytics:write'
   | 'system:admin'
-  | 'system:config';
+  | 'system:config'
+  | 'system:monitor';
 
 // Define role permissions mapping
 export const ROLE_PERMISSIONS: Record<string, Permission[]> = {
@@ -96,6 +97,7 @@ export const ROLE_PERMISSIONS: Record<string, Permission[]> = {
     'analytics:write',
     'system:admin',
     'system:config',
+    'system:monitor',
   ],
 };
 
@@ -442,5 +444,6 @@ export const PERMISSIONS = {
   SYSTEM: {
     ADMIN: 'system:admin' as Permission,
     CONFIG: 'system:config' as Permission,
+    MONITOR: 'system:monitor' as Permission,
   },
 };

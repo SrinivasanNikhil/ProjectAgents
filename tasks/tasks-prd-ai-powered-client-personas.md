@@ -20,6 +20,8 @@
 - `src/server/middleware/roleCheck.test.ts` - Unit tests for role middleware
 - `src/server/middleware/fileUpload.ts` - File upload middleware with validation and error handling
 - `src/server/middleware/fileUpload.test.ts` - Unit tests for file upload middleware
+- `src/server/middleware/errorHandler.ts` - Comprehensive error handling middleware with custom error classes
+- `src/server/middleware/errorHandler.test.ts` - Unit tests for error handling middleware
 
 ### Database Models
 
@@ -52,6 +54,8 @@
 - `src/server/routes/milestones.test.ts` - Unit tests for milestone routes
 - `src/server/routes/artifacts.ts` - File upload and artifact routes with comprehensive CRUD operations
 - `src/server/routes/artifacts.test.ts` - Unit tests for artifact routes
+- `src/server/routes/monitoring.ts` - System monitoring and health check routes
+- `src/server/routes/monitoring.test.ts` - Unit tests for monitoring routes
 - `src/server/routes/admin.ts` - System administration routes
 - `src/server/routes/admin.test.ts` - Unit tests for admin routes
 
@@ -69,6 +73,8 @@
 - `src/server/services/milestoneService.test.ts` - Unit tests for milestone service
 - `src/server/services/fileService.ts` - File upload and storage logic with S3 and local storage support
 - `src/server/services/fileService.test.ts` - Unit tests for file service
+- `src/server/services/monitoringService.ts` - System monitoring and health check service
+- `src/server/services/monitoringService.test.ts` - Unit tests for monitoring service
 
 ### Frontend Components
 
@@ -149,7 +155,7 @@
   - [x] 1.6 Configure role-based access control (RBAC)
   - [x] 1.7 Set up WebSocket server for real-time communication
   - [x] 1.8 Configure file storage system for artifacts
-  - [ ] 1.9 Set up logging and error handling infrastructure
+  - [x] 1.9 Set up logging and error handling infrastructure
 
 - [ ] 2.0 Persona Generation and Management System
   - [ ] 2.1 Create persona data models and database schema

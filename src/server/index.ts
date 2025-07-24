@@ -12,10 +12,12 @@ import path from 'path';
 import { connectDatabase } from './config/database';
 import { logger, stream } from './config/logger';
 import { webSocketManager } from './config/websocket';
+import { monitoringService } from './services/monitoringService';
 
 // Import routes
 import authRoutes from './routes/auth';
 import artifactRoutes from './routes/artifacts';
+import monitoringRoutes from './routes/monitoring';
 
 // Import middleware
 import { authenticateToken, optionalAuth } from './middleware/auth';
@@ -26,6 +28,13 @@ import {
   requireAdministrator,
   PERMISSIONS,
 } from './middleware/roleCheck';
+import {
+  addRequestId,
+  performanceMonitor,
+  errorHandler,
+  notFoundHandler,
+  setupProcessErrorHandlers,
+} from './middleware/errorHandler';
 
 // Load environment variables
 dotenv.config();
@@ -67,6 +76,10 @@ if (process.env.COMPRESSION_ENABLED === 'true') {
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Request tracking and monitoring middleware
+app.use(addRequestId);
+app.use(performanceMonitor);
 
 // Logging middleware
 app.use(morgan('combined', { stream }));
@@ -120,6 +133,7 @@ app.get('/health', async (req, res) => {
 // API routes
 app.use('/api/auth', authRoutes);
 app.use('/api/artifacts', artifactRoutes);
+app.use('/api/monitoring', monitoringRoutes);
 
 // Protected routes example
 app.get('/api/protected', authenticateToken, (req, res) => {
@@ -234,74 +248,17 @@ app.get(
 );
 
 // 404 handler
-app.use('*', (req, res) => {
-  res.status(404).json({
-    success: false,
-    message: 'Route not found',
-    code: 'ROUTE_NOT_FOUND',
-  });
-});
+app.use('*', notFoundHandler);
 
 // Global error handler
-app.use(
-  (
-    error: any,
-    req: express.Request,
-    res: express.Response,
-    next: express.NextFunction
-  ) => {
-    logger.error('Unhandled error:', error);
-
-    // Mongoose validation error
-    if (error.name === 'ValidationError') {
-      const errors = Object.values(error.errors).map((err: any) => err.message);
-      return res.status(400).json({
-        success: false,
-        message: 'Validation failed',
-        errors,
-        code: 'VALIDATION_ERROR',
-      });
-    }
-
-    // Mongoose duplicate key error
-    if (error.code === 11000) {
-      const field = Object.keys(error.keyValue)[0];
-      return res.status(409).json({
-        success: false,
-        message: `${field} already exists`,
-        code: 'DUPLICATE_KEY',
-      });
-    }
-
-    // JWT errors
-    if (error.name === 'JsonWebTokenError') {
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid token',
-        code: 'INVALID_TOKEN',
-      });
-    }
-
-    if (error.name === 'TokenExpiredError') {
-      return res.status(401).json({
-        success: false,
-        message: 'Token expired',
-        code: 'TOKEN_EXPIRED',
-      });
-    }
-
-    // Default error
-    res.status(500).json({
-      success: false,
-      message: 'Internal server error',
-      code: 'INTERNAL_ERROR',
-    });
-  }
-);
+app.use(errorHandler);
 
 // Start server
 const startServer = async () => {
   try {
+    // Set up process error handlers
+    setupProcessErrorHandlers();
+
     // Connect to database
     await connectDatabase();
     logger.info('Database connected successfully');
@@ -310,11 +267,17 @@ const startServer = async () => {
     webSocketManager.initialize(server);
     logger.info('WebSocket server initialized');
 
+    // Start monitoring service
+    monitoringService.startMonitoring();
+    logger.info('Monitoring service started');
+
     // Start listening
     server.listen(PORT, () => {
       logger.info(`Server running on port ${PORT}`);
       logger.info(`Environment: ${process.env.NODE_ENV || 'development'}`);
-      logger.info(`Health check: http://localhost:${PORT}/health`);
+      logger.info(
+        `Health check: http://localhost:${PORT}/api/monitoring/health`
+      );
       logger.info(`WebSocket endpoint: ws://localhost:${PORT}`);
     });
   } catch (error) {
@@ -326,23 +289,14 @@ const startServer = async () => {
 // Handle graceful shutdown
 process.on('SIGTERM', () => {
   logger.info('SIGTERM received, shutting down gracefully');
+  monitoringService.stopMonitoring();
   process.exit(0);
 });
 
 process.on('SIGINT', () => {
   logger.info('SIGINT received, shutting down gracefully');
+  monitoringService.stopMonitoring();
   process.exit(0);
-});
-
-// Handle uncaught exceptions
-process.on('uncaughtException', error => {
-  logger.error('Uncaught Exception:', error);
-  process.exit(1);
-});
-
-process.on('unhandledRejection', (reason, promise) => {
-  logger.error('Unhandled Rejection at:', promise, 'reason:', reason);
-  process.exit(1);
 });
 
 // Start the server
