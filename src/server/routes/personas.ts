@@ -385,4 +385,28 @@ router.get(
   })
 );
 
+/**
+ * @route PUT /api/personas/:id/customize
+ * @desc Update persona customization settings
+ * @access Private (Instructor only)
+ */
+router.put(
+  '/:id/customize',
+  authenticateToken,
+  requirePermission(PERMISSIONS.PERSONA.WRITE),
+  asyncHandler(async (req: any, res: Response) => {
+    const persona = await personaService.updatePersonaCustomization(
+      req.params.id,
+      req.body,
+      req.user.id
+    );
+
+    res.json({
+      success: true,
+      message: 'Persona customization updated successfully',
+      data: persona,
+    });
+  })
+);
+
 export default router;

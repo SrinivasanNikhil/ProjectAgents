@@ -1067,6 +1067,73 @@ Format the response as a JSON array with objects containing: role, background, p
 
     return fallbackSuggestions;
   }
+
+  /**
+   * Update persona customization settings
+   */
+  async updatePersonaCustomization(
+    personaId: string,
+    customizationData: any,
+    userId: string
+  ): Promise<IPersona> {
+    try {
+      // Verify user has access to the persona
+      const persona = await this.getPersona(personaId, userId);
+      if (!persona) {
+        throw new Error('Persona not found or access denied');
+      }
+
+      // Update personality settings
+      if (customizationData.personality) {
+        persona.personality = {
+          ...persona.personality,
+          ...customizationData.personality,
+        };
+      }
+
+      // Update mood settings
+      if (customizationData.mood) {
+        persona.mood = {
+          ...persona.mood,
+          ...customizationData.mood,
+        };
+      }
+
+      // Update AI configuration
+      if (customizationData.aiConfiguration) {
+        persona.aiConfiguration = {
+          ...persona.aiConfiguration,
+          ...customizationData.aiConfiguration,
+        };
+      }
+
+      // Update availability settings
+      if (customizationData.availability) {
+        persona.availability = {
+          ...persona.availability,
+          ...customizationData.availability,
+        };
+      }
+
+      // Save the updated persona
+      await persona.save();
+
+      // Log the customization update
+      logUserActivity(userId, 'UpdatePersonaCustomization', {
+        personaId,
+        customizationFields: Object.keys(customizationData),
+      });
+
+      return persona;
+    } catch (error) {
+      logError(error as Error, 'PersonaService.updatePersonaCustomization', {
+        personaId,
+        userId,
+        customizationData,
+      });
+      throw error;
+    }
+  }
 }
 
 export const personaService = new PersonaService();
