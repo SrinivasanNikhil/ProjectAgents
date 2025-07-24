@@ -9,7 +9,9 @@ module.exports = (env, argv) => {
     output: {
       path: path.resolve(__dirname, 'dist/client'),
       filename: isProduction ? '[name].[contenthash].js' : '[name].js',
-      chunkFilename: isProduction ? '[name].[contenthash].chunk.js' : '[name].chunk.js',
+      chunkFilename: isProduction
+        ? '[name].[contenthash].chunk.js'
+        : '[name].chunk.js',
       publicPath: '/',
       clean: true,
     },
@@ -30,7 +32,7 @@ module.exports = (env, argv) => {
           use: {
             loader: 'ts-loader',
             options: {
-              configFile: 'tsconfig.json',
+              configFile: 'tsconfig.client.json',
             },
           },
         },
@@ -94,4 +96,4 @@ module.exports = (env, argv) => {
     },
     devtool: isProduction ? 'source-map' : 'eval-source-map',
   };
-}; 
+};

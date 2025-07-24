@@ -1,0 +1,10 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "outDir": "./dist/client",
+    "jsx": "react-jsx"
+  },
+  "include": ["src/client/**/*"],
+  "exclude": ["src/server/**/*", "node_modules", "dist", "build"]
+}

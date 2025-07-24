@@ -13,11 +13,13 @@ import { connectDatabase } from './config/database';
 import { logger, stream } from './config/logger';
 import { webSocketManager } from './config/websocket';
 import { monitoringService } from './services/monitoringService';
+import { aiService } from './config/ai';
 
 // Import routes
 import authRoutes from './routes/auth';
 import artifactRoutes from './routes/artifacts';
 import monitoringRoutes from './routes/monitoring';
+import personaRoutes from './routes/personas';
 
 // Import middleware
 import { authenticateToken, optionalAuth } from './middleware/auth';
@@ -134,6 +136,7 @@ app.get('/health', async (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/artifacts', artifactRoutes);
 app.use('/api/monitoring', monitoringRoutes);
+app.use('/api/personas', personaRoutes);
 
 // Protected routes example
 app.get('/api/protected', authenticateToken, (req, res) => {
@@ -262,6 +265,10 @@ const startServer = async () => {
     // Connect to database
     await connectDatabase();
     logger.info('Database connected successfully');
+
+    // Initialize AI service
+    await aiService.initialize();
+    logger.info('AI service initialized successfully');
 
     // Initialize WebSocket server
     webSocketManager.initialize(server);

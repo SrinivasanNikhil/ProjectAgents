@@ -17,7 +17,7 @@ export interface JWTPayload {
   userId: string;
   email: string;
   role: string;
-  iat: number;
+  iat?: number;
   exp?: number;
 }
 
@@ -159,7 +159,6 @@ export const generateToken = (user: IUser): string => {
     userId: (user._id as any).toString(),
     email: user.email,
     role: user.role,
-    iat: Math.floor(Date.now() / 1000),
   };
 
   return jwt.sign(payload, process.env.JWT_SECRET!, {
