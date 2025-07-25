@@ -1134,6 +1134,149 @@ Format the response as a JSON array with objects containing: role, background, p
       throw error;
     }
   }
+
+  /**
+   * Get template by ID
+   */
+  async getTemplate(
+    templateId: string,
+    userId: string
+  ): Promise<IPersonaTemplate | null> {
+    try {
+      const template = await PersonaTemplate.findById(templateId)
+        .populate('createdBy', 'name email')
+        .populate('usage.projects', 'name');
+
+      if (!template) {
+        return null;
+      }
+
+      // Check if user has access to the template
+      if (!template.isPublic && template.createdBy.toString() !== userId) {
+        return null;
+      }
+
+      return template;
+    } catch (error) {
+      logError(error as Error, 'PersonaService.getTemplate', {
+        templateId,
+        userId,
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Update template
+   */
+  async updateTemplate(
+    templateId: string,
+    updateData: any,
+    userId: string
+  ): Promise<IPersonaTemplate> {
+    try {
+      const template = await PersonaTemplate.findById(templateId);
+      if (!template) {
+        throw new Error('Template not found');
+      }
+
+      // Check if user owns the template
+      if (template.createdBy.toString() !== userId) {
+        throw new Error('Access denied to template');
+      }
+
+      // Update template data
+      Object.assign(template, updateData);
+      template.version += 1;
+
+      await template.save();
+
+      // Log the template update
+      logUserActivity(userId, 'UpdatePersonaTemplate', {
+        templateId,
+        updateFields: Object.keys(updateData),
+      });
+
+      return template;
+    } catch (error) {
+      logError(error as Error, 'PersonaService.updateTemplate', {
+        templateId,
+        userId,
+        updateData,
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Delete template
+   */
+  async deleteTemplate(templateId: string, userId: string): Promise<void> {
+    try {
+      const template = await PersonaTemplate.findById(templateId);
+      if (!template) {
+        throw new Error('Template not found');
+      }
+
+      // Check if user owns the template
+      if (template.createdBy.toString() !== userId) {
+        throw new Error('Access denied to template');
+      }
+
+      await PersonaTemplate.findByIdAndDelete(templateId);
+
+      // Log the template deletion
+      logUserActivity(userId, 'DeletePersonaTemplate', {
+        templateId,
+        templateName: template.name,
+      });
+    } catch (error) {
+      logError(error as Error, 'PersonaService.deleteTemplate', {
+        templateId,
+        userId,
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Clone template
+   */
+  async cloneTemplate(
+    templateId: string,
+    userId: string
+  ): Promise<IPersonaTemplate> {
+    try {
+      const template = await PersonaTemplate.findById(templateId);
+      if (!template) {
+        throw new Error('Template not found');
+      }
+
+      // Check if user has access to the template
+      if (!template.isPublic && template.createdBy.toString() !== userId) {
+        throw new Error('Access denied to template');
+      }
+
+      const clonedTemplate = await template.clone();
+      clonedTemplate.createdBy = new Types.ObjectId(userId);
+      clonedTemplate.isPublic = false;
+      await clonedTemplate.save();
+
+      // Log the template cloning
+      logUserActivity(userId, 'ClonePersonaTemplate', {
+        originalTemplateId: templateId,
+        clonedTemplateId: clonedTemplate._id,
+      });
+
+      return clonedTemplate;
+    } catch (error) {
+      logError(error as Error, 'PersonaService.cloneTemplate', {
+        templateId,
+        userId,
+      });
+      throw error;
+    }
+  }
 }
 
 export const personaService = new PersonaService();

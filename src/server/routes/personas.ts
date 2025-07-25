@@ -269,10 +269,21 @@ router.get(
   authenticateToken,
   requirePermission(PERMISSIONS.PERSONA.READ),
   asyncHandler(async (req: any, res: Response) => {
-    // This would need to be implemented in the service
-    res.status(501).json({
-      success: false,
-      message: 'Get template by ID not implemented yet',
+    const template = await personaService.getTemplate(
+      req.params.id,
+      req.user.id
+    );
+
+    if (!template) {
+      return res.status(404).json({
+        success: false,
+        message: 'Template not found or access denied',
+      });
+    }
+
+    res.json({
+      success: true,
+      data: template,
     });
   })
 );
@@ -287,10 +298,16 @@ router.put(
   authenticateToken,
   requirePermission(PERMISSIONS.PERSONA.WRITE),
   asyncHandler(async (req: any, res: Response) => {
-    // This would need to be implemented in the service
-    res.status(501).json({
-      success: false,
-      message: 'Update template not implemented yet',
+    const template = await personaService.updateTemplate(
+      req.params.id,
+      req.body,
+      req.user.id
+    );
+
+    res.json({
+      success: true,
+      message: 'Template updated successfully',
+      data: template,
     });
   })
 );
@@ -305,10 +322,34 @@ router.delete(
   authenticateToken,
   requirePermission(PERMISSIONS.PERSONA.DELETE),
   asyncHandler(async (req: any, res: Response) => {
-    // This would need to be implemented in the service
-    res.status(501).json({
-      success: false,
-      message: 'Delete template not implemented yet',
+    await personaService.deleteTemplate(req.params.id, req.user.id);
+
+    res.json({
+      success: true,
+      message: 'Template deleted successfully',
+    });
+  })
+);
+
+/**
+ * @route POST /api/personas/templates/:id/clone
+ * @desc Clone template
+ * @access Private (Instructor only)
+ */
+router.post(
+  '/templates/:id/clone',
+  authenticateToken,
+  requirePermission(PERMISSIONS.PERSONA.READ),
+  asyncHandler(async (req: any, res: Response) => {
+    const clonedTemplate = await personaService.cloneTemplate(
+      req.params.id,
+      req.user.id
+    );
+
+    res.json({
+      success: true,
+      message: 'Template cloned successfully',
+      data: clonedTemplate,
     });
   })
 );
