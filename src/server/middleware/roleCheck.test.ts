@@ -17,19 +17,20 @@ import {
   Permission,
 } from './roleCheck';
 import { IUser } from '../models/User';
+import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
 
 // Mock the logger
-jest.mock('../config/logger', () => ({
+vi.mock('../config/logger', () => ({
   logger: {
-    warn: jest.fn(),
-    error: jest.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
   },
 }));
 
 // Mock the User model
-jest.mock('../models/User', () => ({
+vi.mock('../models/User', () => ({
   User: {
-    findById: jest.fn(),
+    findById: vi.fn(),
   },
 }));
 
@@ -48,7 +49,7 @@ describe('Role-Based Access Control (RBAC)', () => {
     department: 'Computer Science',
     studentId: 'STU001',
     isActive: true,
-    canAccessProject: jest.fn(),
+    canAccessProject: vi.fn(),
   };
 
   const mockInstructor: Partial<IUser> = {
@@ -60,7 +61,7 @@ describe('Role-Based Access Control (RBAC)', () => {
     department: 'Computer Science',
     instructorId: 'INS001',
     isActive: true,
-    canAccessProject: jest.fn(),
+    canAccessProject: vi.fn(),
   };
 
   const mockAdministrator: Partial<IUser> = {
@@ -71,7 +72,7 @@ describe('Role-Based Access Control (RBAC)', () => {
     role: 'administrator',
     department: 'IT',
     isActive: true,
-    canAccessProject: jest.fn(),
+    canAccessProject: vi.fn(),
   };
 
   beforeEach(() => {
@@ -81,14 +82,14 @@ describe('Role-Based Access Control (RBAC)', () => {
       headers: {},
     };
     mockResponse = {
-      status: jest.fn().mockReturnThis(),
-      json: jest.fn(),
+      status: vi.fn().mockReturnThis(),
+      json: vi.fn(),
     };
-    mockNext = jest.fn();
+    mockNext = vi.fn();
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('Permission Checking Functions', () => {
@@ -166,11 +167,17 @@ describe('Role-Based Access Control (RBAC)', () => {
   describe('Resource Access Functions', () => {
     describe('canAccessResource', () => {
       beforeEach(() => {
-        (mockStudent.canAccessProject as jest.Mock).mockResolvedValue(true);
-        (mockInstructor.canAccessProject as jest.Mock).mockResolvedValue(true);
-        (mockAdministrator.canAccessProject as jest.Mock).mockResolvedValue(
-          true
-        );
+        (
+          mockStudent.canAccessProject as unknown as ReturnType<typeof vi.fn>
+        ).mockResolvedValue(true);
+        (
+          mockInstructor.canAccessProject as unknown as ReturnType<typeof vi.fn>
+        ).mockResolvedValue(true);
+        (
+          mockAdministrator.canAccessProject as unknown as ReturnType<
+            typeof vi.fn
+          >
+        ).mockResolvedValue(true);
       });
 
       it('should return true for administrator regardless of resource', async () => {
@@ -204,7 +211,9 @@ describe('Role-Based Access Control (RBAC)', () => {
       });
 
       it('should return false for student with permission but no project access', async () => {
-        (mockStudent.canAccessProject as jest.Mock).mockResolvedValue(false);
+        (
+          mockStudent.canAccessProject as unknown as ReturnType<typeof vi.fn>
+        ).mockResolvedValue(false);
         const result = await canAccessResource(
           mockStudent as IUser,
           'project',
@@ -237,7 +246,9 @@ describe('Role-Based Access Control (RBAC)', () => {
 
     describe('canPerformAction', () => {
       beforeEach(() => {
-        (mockStudent.canAccessProject as jest.Mock).mockResolvedValue(true);
+        (
+          mockStudent.canAccessProject as unknown as ReturnType<typeof vi.fn>
+        ).mockResolvedValue(true);
       });
 
       it('should return true for user with permission and no resource check', async () => {
@@ -397,7 +408,9 @@ describe('Role-Based Access Control (RBAC)', () => {
 
     describe('requireResourceAccess', () => {
       beforeEach(() => {
-        (mockStudent.canAccessProject as jest.Mock).mockResolvedValue(true);
+        (
+          mockStudent.canAccessProject as unknown as ReturnType<typeof vi.fn>
+        ).mockResolvedValue(true);
         mockRequest.params = { id: '507f1f77bcf86cd799439014' };
       });
 
@@ -414,7 +427,9 @@ describe('Role-Based Access Control (RBAC)', () => {
       });
 
       it('should return 403 for user without resource access', async () => {
-        (mockStudent.canAccessProject as jest.Mock).mockResolvedValue(false);
+        (
+          mockStudent.canAccessProject as unknown as ReturnType<typeof vi.fn>
+        ).mockResolvedValue(false);
         const middleware = requireResourceAccess('project', 'project:read');
         await middleware(
           mockRequest as Request,
@@ -453,9 +468,9 @@ describe('Role-Based Access Control (RBAC)', () => {
       });
 
       it('should return 500 for database error', async () => {
-        (mockStudent.canAccessProject as jest.Mock).mockRejectedValue(
-          new Error('Database error')
-        );
+        (
+          mockStudent.canAccessProject as unknown as ReturnType<typeof vi.fn>
+        ).mockRejectedValue(new Error('Database error'));
         const middleware = requireResourceAccess('project', 'project:read');
         await middleware(
           mockRequest as Request,

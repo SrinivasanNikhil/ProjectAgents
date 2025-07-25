@@ -48,7 +48,7 @@
 - `src/server/routes/auth.test.ts` - Unit tests for auth routes
 - `src/server/routes/projects.ts` - Project management routes
 - `src/server/routes/projects.test.ts` - Unit tests for project routes
-- `src/server/routes/personas.ts` - Persona management routes with CRUD, templates, mood management, and AI generation
+- `src/server/routes/personas.ts` - Persona management routes with CRUD, templates, mood management, AI generation, and instructor dashboard endpoints
 - `src/server/routes/personas.test.ts` - Unit tests for persona routes
 - `src/server/routes/chat.ts` - Real-time chat routes
 - `src/server/routes/chat.test.ts` - Unit tests for chat routes
@@ -67,7 +67,7 @@
 
 - `src/server/services/aiService.ts` - AI integration service for persona responses
 - `src/server/services/aiService.test.ts` - Unit tests for AI service
-- `src/server/services/personaService.ts` - Persona generation and management logic with AI integration, templates and mood tracking
+- `src/server/services/personaService.ts` - Persona generation and management logic with AI integration, templates, mood tracking, and instructor dashboard functionality
 - `src/server/services/personaService.test.ts` - Unit tests for persona service
 - `src/server/services/chatService.ts` - Real-time chat and messaging logic with WebSocket integration, message persistence, and conversation management
 - `src/server/services/chatService.test.ts` - Unit tests for chat service
@@ -104,6 +104,12 @@
 - `src/client/components/Personas/TemplateLibrary.test.tsx` - Unit tests for template library with comprehensive test coverage
 - `src/client/components/Personas/TemplateForm.tsx` - Template creation and editing form with validation and AI prompt generation
 - `src/client/components/Personas/TemplateForm.test.tsx` - Unit tests for template form with comprehensive test coverage
+- `src/client/components/Personas/PersonaManagementDashboard.tsx` - Comprehensive persona management dashboard for instructors with filtering, sorting, management capabilities, and edit functionality
+- `src/client/components/Personas/PersonaManagementDashboard.test.tsx` - Unit tests for persona management dashboard with comprehensive test coverage
+- `src/client/components/Personas/PersonaEditModal.tsx` - Modal component for editing existing personas with form validation and error handling
+- `src/client/components/Personas/PersonaEditModal.test.tsx` - Unit tests for persona edit modal with comprehensive test coverage
+- `src/client/components/Personas/PersonaMoodConsistency.tsx` - Comprehensive mood and personality consistency interface with analytics, drift detection, and response adaptation
+- `src/client/components/Personas/PersonaMoodConsistency.test.tsx` - Unit tests for mood and personality consistency functionality
 - `src/client/components/Chat/ChatInterface.tsx` - Real-time chat interface
 - `src/client/components/Chat/ChatInterface.test.tsx` - Unit tests for chat interface
 - `src/client/components/Chat/MessageList.tsx` - Message display component
@@ -173,10 +179,10 @@
   - [x] 2.3 Build persona creation form with project-based suggestions
   - [x] 2.4 Implement persona customization interface
   - [x] 2.5 Create persona template system
-  - [ ] 2.6 Build persona management dashboard for instructors
-  - [ ] 2.7 Implement mid-project persona addition functionality
-  - [ ] 2.8 Create persona editing and modification interface
-  - [ ] 2.9 Add persona mood and personality consistency system
+  - [x] 2.6 Build persona management dashboard for instructors
+  - [x] 2.7 Implement mid-project persona addition functionality
+  - [x] 2.8 Create persona editing and modification interface
+  - [x] 2.9 Add persona mood and personality consistency system
 
 - [ ] 3.0 Real-time Chat Interface and Communication System
   - [ ] 3.1 Set up WebSocket connection management

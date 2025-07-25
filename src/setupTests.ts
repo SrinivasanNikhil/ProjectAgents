@@ -1,3 +1,4 @@
+import { vi, beforeAll, afterAll } from 'vitest';
 import '@testing-library/jest-dom';
 
 // Mock WebSocket for tests
@@ -33,37 +34,37 @@ import '@testing-library/jest-dom';
 
 // Mock localStorage
 const localStorageMock = {
-  getItem: (jest as any).fn(),
-  setItem: (jest as any).fn(),
-  removeItem: (jest as any).fn(),
-  clear: (jest as any).fn(),
+  getItem: vi.fn(),
+  setItem: vi.fn(),
+  removeItem: vi.fn(),
+  clear: vi.fn(),
 };
 (global as any).localStorage = localStorageMock;
 
 // Mock sessionStorage
 const sessionStorageMock = {
-  getItem: (jest as any).fn(),
-  setItem: (jest as any).fn(),
-  removeItem: (jest as any).fn(),
-  clear: (jest as any).fn(),
+  getItem: vi.fn(),
+  setItem: vi.fn(),
+  removeItem: vi.fn(),
+  clear: vi.fn(),
 };
 (global as any).sessionStorage = sessionStorageMock;
 
 // Mock fetch
-(global as any).fetch = (jest as any).fn();
+(global as any).fetch = vi.fn();
 
 // Mock IntersectionObserver
-(global as any).IntersectionObserver = (jest as any).fn().mockImplementation(() => ({
-  observe: (jest as any).fn(),
-  unobserve: (jest as any).fn(),
-  disconnect: (jest as any).fn(),
+(global as any).IntersectionObserver = vi.fn().mockImplementation(() => ({
+  observe: vi.fn(),
+  unobserve: vi.fn(),
+  disconnect: vi.fn(),
 }));
 
 // Mock ResizeObserver
-(global as any).ResizeObserver = (jest as any).fn().mockImplementation(() => ({
-  observe: (jest as any).fn(),
-  unobserve: (jest as any).fn(),
-  disconnect: (jest as any).fn(),
+(global as any).ResizeObserver = vi.fn().mockImplementation(() => ({
+  observe: vi.fn(),
+  unobserve: vi.fn(),
+  disconnect: vi.fn(),
 }));
 
 // Suppress console warnings in tests
@@ -82,4 +83,4 @@ beforeAll(() => {
 
 afterAll(() => {
   console.warn = originalWarn;
-}); 
+});

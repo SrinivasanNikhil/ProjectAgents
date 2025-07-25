@@ -70,6 +70,26 @@ router.get(
 );
 
 /**
+ * @route GET /api/personas
+ * @desc Get all personas for instructor dashboard
+ * @access Private (Instructor only)
+ */
+router.get(
+  '/',
+  authenticateToken,
+  requirePermission(PERMISSIONS.PERSONA.READ),
+  asyncHandler(async (req: any, res: Response) => {
+    const personas = await personaService.getAllPersonas(req.user.id);
+
+    res.json({
+      success: true,
+      data: personas,
+      count: personas.length,
+    });
+  })
+);
+
+/**
  * @route GET /api/personas/project/:projectId
  * @desc Get all personas for a project
  * @access Private
@@ -180,6 +200,123 @@ router.get(
       success: true,
       data: moods,
       count: moods.length,
+    });
+  })
+);
+
+/**
+ * @route GET /api/personas/:id/mood/analytics
+ * @desc Get persona mood analytics and insights
+ * @access Private
+ */
+router.get(
+  '/:id/mood/analytics',
+  authenticateToken,
+  requirePermission(PERMISSIONS.PERSONA.READ),
+  asyncHandler(async (req: any, res: Response) => {
+    const timeframe =
+      (req.query.timeframe as 'day' | 'week' | 'month' | 'all') || 'week';
+    const analytics = await personaService.getPersonaMoodAnalytics(
+      req.params.id,
+      req.user.id,
+      timeframe
+    );
+
+    res.json({
+      success: true,
+      data: analytics,
+    });
+  })
+);
+
+/**
+ * @route GET /api/personas/:id/personality/consistency
+ * @desc Analyze persona personality consistency
+ * @access Private
+ */
+router.get(
+  '/:id/personality/consistency',
+  authenticateToken,
+  requirePermission(PERMISSIONS.PERSONA.READ),
+  asyncHandler(async (req: any, res: Response) => {
+    const analysis = await personaService.analyzePersonalityConsistency(
+      req.params.id,
+      req.user.id
+    );
+
+    res.json({
+      success: true,
+      data: analysis,
+    });
+  })
+);
+
+/**
+ * @route POST /api/personas/:id/mood/advanced
+ * @desc Update persona mood with advanced tracking
+ * @access Private
+ */
+router.post(
+  '/:id/mood/advanced',
+  authenticateToken,
+  requirePermission(PERMISSIONS.PERSONA.WRITE),
+  asyncHandler(async (req: any, res: Response) => {
+    const result = await personaService.updatePersonaMoodAdvanced(
+      req.params.id,
+      req.body,
+      req.user.id
+    );
+
+    res.json({
+      success: true,
+      message: 'Persona mood updated with advanced tracking',
+      data: result,
+    });
+  })
+);
+
+/**
+ * @route POST /api/personas/:id/response/adaptation
+ * @desc Get mood-based response adaptation
+ * @access Private
+ */
+router.post(
+  '/:id/response/adaptation',
+  authenticateToken,
+  requirePermission(PERMISSIONS.PERSONA.READ),
+  asyncHandler(async (req: any, res: Response) => {
+    const adaptation = await personaService.getMoodBasedResponseAdaptation(
+      req.params.id,
+      req.body,
+      req.user.id
+    );
+
+    res.json({
+      success: true,
+      data: adaptation,
+    });
+  })
+);
+
+/**
+ * @route POST /api/personas/:id/personality/drift
+ * @desc Detect and correct personality drift
+ * @access Private
+ */
+router.post(
+  '/:id/personality/drift',
+  authenticateToken,
+  requirePermission(PERMISSIONS.PERSONA.WRITE),
+  asyncHandler(async (req: any, res: Response) => {
+    const result = await personaService.detectAndCorrectPersonalityDrift(
+      req.params.id,
+      req.user.id
+    );
+
+    res.json({
+      success: true,
+      message: 'Personality drift analysis completed',
+      data: result,
     });
   })
 );
@@ -445,6 +582,76 @@ router.put(
     res.json({
       success: true,
       message: 'Persona customization updated successfully',
+      data: persona,
+    });
+  })
+);
+
+/**
+ * @route POST /api/personas/mid-project
+ * @desc Create a new persona mid-project with context awareness
+ * @access Private (Instructor only)
+ */
+router.post(
+  '/mid-project',
+  authenticateToken,
+  requirePermission(PERMISSIONS.PERSONA.WRITE),
+  asyncHandler(async (req: any, res: Response) => {
+    const persona = await personaService.createMidProjectPersona(
+      req.body,
+      req.user.id
+    );
+
+    res.status(201).json({
+      success: true,
+      message: 'Mid-project persona created successfully',
+      data: persona,
+    });
+  })
+);
+
+/**
+ * @route POST /api/personas/mid-project-suggestions
+ * @desc Get AI suggestions for mid-project persona addition
+ * @access Private (Instructor only)
+ */
+router.post(
+  '/mid-project-suggestions',
+  authenticateToken,
+  requirePermission(PERMISSIONS.PERSONA.READ),
+  asyncHandler(async (req: any, res: Response) => {
+    const suggestions = await personaService.getMidProjectSuggestions(
+      req.body,
+      req.user.id
+    );
+
+    res.json({
+      success: true,
+      data: suggestions,
+      count: suggestions.length,
+    });
+  })
+);
+
+/**
+ * @route POST /api/personas/:id/mid-project-update
+ * @desc Update existing persona for mid-project changes
+ * @access Private (Instructor only)
+ */
+router.post(
+  '/:id/mid-project-update',
+  authenticateToken,
+  requirePermission(PERMISSIONS.PERSONA.WRITE),
+  asyncHandler(async (req: any, res: Response) => {
+    const persona = await personaService.updatePersonaForMidProject(
+      req.params.id,
+      req.body,
+      req.user.id
+    );
+
+    res.json({
+      success: true,
+      message: 'Persona updated for mid-project changes successfully',
       data: persona,
     });
   })

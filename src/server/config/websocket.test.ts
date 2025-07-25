@@ -5,46 +5,47 @@ import {
 } from './websocket';
 import { createServer } from 'http';
 import jwt from 'jsonwebtoken';
+import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
 
 // Mock logger
-jest.mock('./logger', () => ({
+vi.mock('./logger', () => ({
   logger: {
-    info: jest.fn(),
-    error: jest.fn(),
+    info: vi.fn(),
+    error: vi.fn(),
   },
 }));
 
 // Mock socket.io
-jest.mock('socket.io', () => {
+vi.mock('socket.io', () => {
   const mockSocket = {
     id: 'socket123',
     handshake: { auth: {}, headers: {} },
     user: undefined,
-    join: jest.fn(),
-    leave: jest.fn(),
-    emit: jest.fn(),
-    to: jest.fn().mockReturnThis(),
+    join: vi.fn(),
+    leave: vi.fn(),
+    emit: vi.fn(),
+    to: vi.fn().mockReturnThis(),
     rooms: new Set(),
     data: {},
   };
 
   const mockIO = {
-    use: jest.fn(),
-    on: jest.fn(),
-    to: jest.fn().mockReturnThis(),
-    emit: jest.fn(),
+    use: vi.fn(),
+    on: vi.fn(),
+    to: vi.fn().mockReturnThis(),
+    emit: vi.fn(),
     engine: { clientsCount: 0 },
     sockets: {
       adapter: {
         rooms: {
-          get: jest.fn().mockReturnValue({ size: 0 }),
+          get: vi.fn().mockReturnValue({ size: 0 }),
         },
       },
     },
   };
 
   return {
-    Server: jest.fn().mockImplementation(() => mockIO),
+    Server: vi.fn().mockImplementation(() => mockIO),
   };
 });
 
@@ -59,7 +60,7 @@ describe('WebSocket Configuration', () => {
 
   afterEach(() => {
     httpServer.close();
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('defaultWebSocketConfig', () => {
@@ -108,7 +109,7 @@ describe('WebSocket Configuration', () => {
     });
 
     it('should emit to project room', () => {
-      const emitSpy = jest.spyOn(webSocketManager.getIO()!, 'to');
+      const emitSpy = vi.spyOn(webSocketManager.getIO()!, 'to');
       webSocketManager.emitToProject('project123', 'test-event', {
         data: 'test',
       });
@@ -116,19 +117,19 @@ describe('WebSocket Configuration', () => {
     });
 
     it('should emit to user room', () => {
-      const emitSpy = jest.spyOn(webSocketManager.getIO()!, 'to');
+      const emitSpy = vi.spyOn(webSocketManager.getIO()!, 'to');
       webSocketManager.emitToUser('user123', 'test-event', { data: 'test' });
       expect(emitSpy).toHaveBeenCalledWith('user:user123');
     });
 
     it('should emit to role room', () => {
-      const emitSpy = jest.spyOn(webSocketManager.getIO()!, 'to');
+      const emitSpy = vi.spyOn(webSocketManager.getIO()!, 'to');
       webSocketManager.emitToRole('instructor', 'test-event', { data: 'test' });
       expect(emitSpy).toHaveBeenCalledWith('role:instructor');
     });
 
     it('should broadcast to all clients', () => {
-      const emitSpy = jest.spyOn(webSocketManager.getIO()!, 'emit');
+      const emitSpy = vi.spyOn(webSocketManager.getIO()!, 'emit');
       webSocketManager.broadcastToAll('test-event', { data: 'test' });
       expect(emitSpy).toHaveBeenCalledWith('test-event', { data: 'test' });
     });
@@ -168,7 +169,7 @@ describe('WebSocket Authentication', () => {
 
   afterEach(() => {
     httpServer.close();
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should authenticate valid token', () => {
@@ -204,7 +205,7 @@ describe('WebSocket Rate Limiting', () => {
 
   afterEach(() => {
     httpServer.close();
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should allow messages within rate limit', () => {

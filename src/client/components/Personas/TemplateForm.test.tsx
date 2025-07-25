@@ -2,10 +2,11 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import TemplateForm from './TemplateForm';
+import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
 
 describe('TemplateForm', () => {
-  const mockOnSubmit = jest.fn();
-  const mockOnCancel = jest.fn();
+  const mockOnSubmit = vi.fn();
+  const mockOnCancel = vi.fn();
 
   const mockInitialData = {
     name: 'Test Template',
@@ -42,7 +43,7 @@ describe('TemplateForm', () => {
   };
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('renders the form with all required fields', () => {

@@ -3,28 +3,29 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import TemplateLibrary from './TemplateLibrary';
 import axios from 'axios';
+import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
 
 // Mock axios
-jest.mock('axios');
-const mockedAxios = axios as jest.Mocked<typeof axios>;
+vi.mock('axios');
+const mockedAxios = axios as any;
 
 // Mock localStorage
 const localStorageMock = {
-  getItem: jest.fn(),
-  setItem: jest.fn(),
-  removeItem: jest.fn(),
-  clear: jest.fn(),
+  getItem: vi.fn(),
+  setItem: vi.fn(),
+  removeItem: vi.fn(),
+  clear: vi.fn(),
 };
 Object.defineProperty(window, 'localStorage', {
   value: localStorageMock,
 });
 
 describe('TemplateLibrary', () => {
-  const mockOnSelectTemplate = jest.fn();
-  const mockOnEditTemplate = jest.fn();
-  const mockOnDeleteTemplate = jest.fn();
-  const mockOnCloneTemplate = jest.fn();
-  const mockOnCreateTemplate = jest.fn();
+  const mockOnSelectTemplate = vi.fn();
+  const mockOnEditTemplate = vi.fn();
+  const mockOnDeleteTemplate = vi.fn();
+  const mockOnCloneTemplate = vi.fn();
+  const mockOnCreateTemplate = vi.fn();
 
   const mockTemplates = [
     {
@@ -128,7 +129,7 @@ describe('TemplateLibrary', () => {
   ];
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     localStorageMock.getItem.mockReturnValue('mock-token');
   });
 
@@ -397,7 +398,7 @@ describe('TemplateLibrary', () => {
     mockedAxios.delete.mockResolvedValueOnce({ data: { success: true } });
 
     // Mock window.confirm
-    window.confirm = jest.fn(() => true);
+    window.confirm = vi.fn(() => true);
 
     render(
       <TemplateLibrary
@@ -634,7 +635,7 @@ describe('TemplateLibrary', () => {
     mockedAxios.get.mockResolvedValueOnce({ data: { data: mockTemplates } });
 
     // Mock window.confirm to return false
-    window.confirm = jest.fn(() => false);
+    window.confirm = vi.fn(() => false);
 
     render(
       <TemplateLibrary
@@ -681,7 +682,7 @@ describe('TemplateLibrary', () => {
     mockedAxios.get.mockResolvedValueOnce({ data: { data: mockTemplates } });
     mockedAxios.delete.mockRejectedValueOnce(new Error('Delete failed'));
 
-    window.confirm = jest.fn(() => true);
+    window.confirm = vi.fn(() => true);
 
     render(
       <TemplateLibrary
