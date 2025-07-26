@@ -207,16 +207,19 @@ const TemplateForm: React.FC<TemplateFormProps> = ({
   };
 
   const handleTemplateChange = (parent: string, field: string, value: any) => {
-    setFormData(prev => ({
-      ...prev,
-      template: {
-        ...prev.template,
-        [parent]: {
-          ...(prev.template as any)[parent],
-          [field]: value,
+    setFormData(prev => {
+      const currentParent = prev.template[parent as keyof typeof prev.template];
+      return {
+        ...prev,
+        template: {
+          ...prev.template,
+          [parent]: {
+            ...((currentParent as object) || {}),
+            [field]: value,
+          },
         },
-      },
-    }));
+      };
+    });
   };
 
   const addTrait = () => {

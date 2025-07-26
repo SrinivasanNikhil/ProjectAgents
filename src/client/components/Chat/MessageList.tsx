@@ -5,6 +5,7 @@ import {
   getPlatformConfig,
   extractUrlInfo,
 } from '../../utils/linkUtils';
+import MessageFlagButton from './MessageFlagButton';
 import './MessageList.css';
 
 export interface MessageListProps {
@@ -17,6 +18,11 @@ export interface MessageListProps {
   typingUsers: string[];
   onScrollToBottom?: () => void;
   onReplyToMessage?: (messageId: string) => void;
+  onFlagMessage?: (
+    messageId: string,
+    reason: string,
+    severity: 'low' | 'medium' | 'high'
+  ) => Promise<void>;
   className?: string;
   authToken?: string;
 }
@@ -27,6 +33,7 @@ const MessageList: React.FC<MessageListProps> = ({
   typingUsers,
   onScrollToBottom,
   onReplyToMessage,
+  onFlagMessage,
   className = '',
   authToken,
 }) => {
@@ -290,8 +297,8 @@ const MessageList: React.FC<MessageListProps> = ({
             <div className="message-timestamp">
               {formatTimestamp(message.timestamp)}
             </div>
-            {onReplyToMessage && (
-              <div className="message-actions">
+            <div className="message-actions">
+              {onReplyToMessage && (
                 <button
                   className="action-button reply-button"
                   onClick={handleReply}
@@ -300,8 +307,15 @@ const MessageList: React.FC<MessageListProps> = ({
                   <span className="action-icon">↩️</span>
                   <span className="action-text">Reply</span>
                 </button>
-              </div>
-            )}
+              )}
+              {onFlagMessage && !message.isPersonaMessage && (
+                <MessageFlagButton
+                  messageId={message.id}
+                  onFlag={onFlagMessage}
+                  disabled={isOwn}
+                />
+              )}
+            </div>
           </div>
         </div>
       </div>

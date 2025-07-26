@@ -7,6 +7,7 @@ import ThreadView from './ThreadView';
 import NotificationSettings from './NotificationSettings';
 import NotificationBadge from './NotificationBadge';
 import NotificationHistory from './NotificationHistory';
+import ModerationDashboard from './ModerationDashboard';
 import {
   notificationManager,
   notifyNewMessage,
@@ -50,6 +51,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   const [showNotificationSettings, setShowNotificationSettings] =
     useState(false);
   const [showNotificationHistory, setShowNotificationHistory] = useState(false);
+  const [showModerationDashboard, setShowModerationDashboard] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [lastReadMessageId, setLastReadMessageId] = useState<string | null>(
     null
@@ -123,6 +125,54 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   const handleNotificationHistoryToggle = useCallback(() => {
     setShowNotificationHistory(!showNotificationHistory);
   }, [showNotificationHistory]);
+
+  // Handle moderation dashboard
+  const handleModerationDashboardToggle = useCallback(() => {
+    setShowModerationDashboard(!showModerationDashboard);
+  }, [showModerationDashboard]);
+
+  // Handle flag message
+  const handleFlagMessage = useCallback(
+    async (
+      messageId: string,
+      reason: string,
+      severity: 'low' | 'medium' | 'high'
+    ) => {
+      try {
+        const API_BASE =
+          process.env.REACT_APP_API_BASE || 'http://localhost:3000';
+        const response = await fetch(`${API_BASE}/api/moderation/flag`, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${authToken}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            messageId,
+            reason,
+            severity,
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to flag message');
+        }
+
+        // Show success notification
+        notificationManager.notifySystemMessage(
+          'Message Flagged',
+          'Message has been flagged for moderation review.'
+        );
+      } catch (error) {
+        console.error('Error flagging message:', error);
+        notificationManager.notifySystemMessage(
+          'Flag Failed',
+          'Failed to flag message. Please try again.'
+        );
+      }
+    },
+    [authToken]
+  );
 
   // Handle new messages and notifications
   useEffect(() => {
@@ -294,6 +344,19 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
             </button>
           </div>
 
+          {/* Moderation Dashboard Button (for instructors/admins) */}
+          {(currentUser.role === 'instructor' ||
+            currentUser.role === 'administrator') && (
+            <button
+              className="moderation-dashboard-button"
+              onClick={handleModerationDashboardToggle}
+              title="Moderation dashboard"
+            >
+              <span className="moderation-icon">🛡️</span>
+              <span className="moderation-text">Moderation</span>
+            </button>
+          )}
+
           {showThreading && (
             <button
               className={`thread-toggle ${showThreadList ? 'active' : ''}`}
@@ -342,6 +405,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
               onScrollToBottom={scrollToBottom}
               authToken={authToken}
               onReplyToMessage={handleReplyToMessage}
+              onFlagMessage={handleFlagMessage}
             />
             <div ref={messagesEndRef} />
           </div>
@@ -387,6 +451,14 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         isOpen={showNotificationHistory}
         onClose={() => setShowNotificationHistory(false)}
       />
+
+      {/* Moderation Dashboard Modal */}
+      {showModerationDashboard && (
+        <ModerationDashboard
+          authToken={authToken}
+          onClose={() => setShowModerationDashboard(false)}
+        />
+      )}
     </div>
   );
 };

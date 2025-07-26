@@ -3,6 +3,8 @@ import { logger } from '../config/logger';
 import { Conversation, Message } from '../models/Conversation';
 import { User } from '../models/User';
 import { Project } from '../models/Project';
+import { moderationService } from './moderationService';
+import { Types } from 'mongoose';
 
 export interface ChatMessage {
   id: string;
@@ -62,6 +64,35 @@ export class ChatService {
     messageData: Omit<ChatMessage, 'id' | 'timestamp'>
   ): Promise<ChatMessage> {
     try {
+      // Check if user is timed out
+      const isTimedOut = await moderationService.isUserTimedOut(
+        messageData.userId
+      );
+      if (isTimedOut) {
+        throw new Error('User is currently timed out and cannot send messages');
+      }
+
+      // Analyze content for inappropriate content
+      const contentAnalysis = await moderationService.analyzeContent(
+        messageData.message
+      );
+
+      // If content is inappropriate, handle based on severity
+      if (contentAnalysis.isInappropriate) {
+        if (contentAnalysis.severity === 'high') {
+          // Block high severity content
+          throw new Error('Message blocked due to inappropriate content');
+        } else if (contentAnalysis.severity === 'medium') {
+          // Flag medium severity content but allow it
+          await moderationService.flagMessage(
+            this.generateMessageId(), // Generate temporary ID
+            messageData.userId,
+            `Auto-flagged: ${contentAnalysis.categories.join(', ')}`,
+            'medium'
+          );
+        }
+      }
+
       const message: ChatMessage = {
         ...messageData,
         id: this.generateMessageId(),
@@ -496,7 +527,7 @@ export class ChatService {
       });
 
       // Add to thread
-      await replyMessage.addToThread(parentMessageId);
+      await replyMessage.addToThread(new Types.ObjectId(parentMessageId));
       await replyMessage.save();
 
       // Populate sender info

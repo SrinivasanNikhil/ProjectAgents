@@ -187,7 +187,7 @@
   - [x] 1.8 Configure file storage system for artifacts
   - [x] 1.9 Set up logging and error handling infrastructure
 
-- [ ] 2.0 Persona Generation and Management System
+- [x] 2.0 Persona Generation and Management System
   - [x] 2.1 Create persona data models and database schema
   - [x] 2.2 Implement AI service integration for persona generation
   - [x] 2.3 Build persona creation form with project-based suggestions
@@ -207,7 +207,7 @@
   - [x] 3.6 Implement external link support (Figma, GitHub, etc.)
   - [x] 3.7 Add conversation threading and organization
   - [x] 3.8 Implement chat notifications and status indicators
-  - [ ] 3.9 Create chat moderation and content filtering
+  - [x] 3.9 Create chat moderation and content filtering
 
 - [ ] 4.0 Instructor Dashboard and Analytics
   - [ ] 4.1 Build instructor dashboard layout and navigation
