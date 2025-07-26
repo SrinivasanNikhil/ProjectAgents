@@ -1,0 +1,194 @@
+.message-status {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: #6b7280;
+  line-height: 1;
+}
+
+.message-status__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  position: relative;
+}
+
+.message-status__icon svg {
+  width: 14px;
+  height: 14px;
+}
+
+.message-status__icon--sending {
+  color: #9ca3af;
+}
+
+.message-status__icon--sent {
+  color: #9ca3af;
+}
+
+.message-status__icon--delivered {
+  color: #3b82f6;
+}
+
+.message-status__icon--read {
+  color: #10b981;
+}
+
+.message-status__icon--failed {
+  color: #ef4444;
+}
+
+/* Double checkmark for delivered/read */
+.message-status__icon--delivered svg:last-child,
+.message-status__icon--read svg:last-child {
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  width: 10px;
+  height: 10px;
+}
+
+/* Spinner for sending status */
+.message-status__spinner {
+  width: 12px;
+  height: 12px;
+  border: 2px solid #e5e7eb;
+  border-top: 2px solid #3b82f6;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.message-status__timestamp {
+  font-size: 11px;
+  color: #9ca3af;
+  white-space: nowrap;
+}
+
+.message-status__text {
+  font-size: 11px;
+  color: #ef4444;
+  font-weight: 500;
+}
+
+/* Size variants */
+.message-status--small {
+  font-size: 10px;
+}
+
+.message-status--small .message-status__icon {
+  width: 12px;
+  height: 12px;
+}
+
+.message-status--small .message-status__icon svg {
+  width: 10px;
+  height: 10px;
+}
+
+.message-status--small .message-status__spinner {
+  width: 8px;
+  height: 8px;
+  border-width: 1px;
+}
+
+.message-status--small .message-status__timestamp {
+  font-size: 10px;
+}
+
+.message-status--medium {
+  font-size: 12px;
+}
+
+.message-status--medium .message-status__icon {
+  width: 16px;
+  height: 16px;
+}
+
+.message-status--medium .message-status__icon svg {
+  width: 14px;
+  height: 14px;
+}
+
+.message-status--large {
+  font-size: 14px;
+}
+
+.message-status--large .message-status__icon {
+  width: 20px;
+  height: 20px;
+}
+
+.message-status--large .message-status__icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.message-status--large .message-status__spinner {
+  width: 16px;
+  height: 16px;
+  border-width: 2px;
+}
+
+.message-status--large .message-status__timestamp {
+  font-size: 12px;
+}
+
+/* Hover effects */
+.message-status:hover .message-status__icon--sent,
+.message-status:hover .message-status__icon--delivered,
+.message-status:hover .message-status__icon--read {
+  transform: scale(1.1);
+  transition: transform 0.15s ease-in-out;
+}
+
+/* Animation for status changes */
+.message-status__icon {
+  transition: all 0.2s ease-in-out;
+}
+
+.message-status__icon--sending {
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+  .message-status {
+    font-size: 11px;
+  }
+
+  .message-status__icon {
+    width: 14px;
+    height: 14px;
+  }
+
+  .message-status__icon svg {
+    width: 12px;
+    height: 12px;
+  }
+
+  .message-status__timestamp {
+    font-size: 10px;
+  }
+}

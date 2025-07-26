@@ -12,6 +12,14 @@ export interface ChatMessage {
   userRole: string;
   message: string;
   type: 'text' | 'file' | 'link' | 'system';
+  // Threading support
+  parentMessageId?: string;
+  threadId?: string;
+  threadTitle?: string;
+  threadDepth: number;
+  threadPosition: number;
+  isThreadRoot: boolean;
+  threadMessageCount: number;
   metadata?: {
     fileName?: string;
     fileSize?: number;
@@ -98,6 +106,11 @@ export class ChatService {
       message,
       type: 'system',
       metadata,
+      // Threading defaults
+      threadDepth: 0,
+      threadPosition: 0,
+      isThreadRoot: false,
+      threadMessageCount: 0,
     };
 
     return this.sendMessage(systemMessage);
@@ -113,19 +126,26 @@ export class ChatService {
     metadata?: any
   ): Promise<ChatMessage> {
     try {
-      // Get persona details from database
-      const persona = await this.getPersonaDetails(personaId);
+      const personaDetails = await this.getPersonaDetails(personaId);
+      if (!personaDetails) {
+        throw new Error('Persona not found');
+      }
 
       const personaMessage: Omit<ChatMessage, 'id' | 'timestamp'> = {
         projectId,
         userId: personaId,
-        userEmail: persona.email || 'persona@system.com',
+        userEmail: personaDetails.name,
         userRole: 'persona',
         message,
         type: 'text',
         metadata,
         isPersonaMessage: true,
         personaId,
+        // Threading defaults
+        threadDepth: 0,
+        threadPosition: 0,
+        isThreadRoot: false,
+        threadMessageCount: 0,
       };
 
       return this.sendMessage(personaMessage);
@@ -256,6 +276,14 @@ export class ChatService {
         userRole: msg.sender.type,
         message: msg.content,
         type: msg.messageType as 'text' | 'file' | 'link' | 'system',
+        // Threading fields
+        parentMessageId: msg.parentMessageId?.toString(),
+        threadId: msg.threadId?.toString(),
+        threadTitle: msg.threadTitle,
+        threadDepth: msg.threadDepth || 0,
+        threadPosition: msg.threadPosition || 0,
+        isThreadRoot: msg.isThreadRoot || false,
+        threadMessageCount: msg.threadMessageCount || 0,
         metadata: msg.metadata
           ? {
               ...msg.metadata,
@@ -335,6 +363,14 @@ export class ChatService {
         userRole: msg.sender.type,
         message: msg.content,
         type: msg.messageType as 'text' | 'file' | 'link' | 'system',
+        // Threading fields
+        parentMessageId: msg.parentMessageId?.toString(),
+        threadId: msg.threadId?.toString(),
+        threadTitle: msg.threadTitle,
+        threadDepth: msg.threadDepth || 0,
+        threadPosition: msg.threadPosition || 0,
+        isThreadRoot: msg.isThreadRoot || false,
+        threadMessageCount: msg.threadMessageCount || 0,
         metadata: msg.metadata
           ? {
               ...msg.metadata,
@@ -350,6 +386,273 @@ export class ChatService {
     } catch (error) {
       logger.error('Error searching messages:', error);
       throw new Error('Failed to search messages');
+    }
+  }
+
+  /**
+   * Create a new thread from a message
+   */
+  public async createThread(
+    projectId: string,
+    messageId: string,
+    title?: string
+  ): Promise<ChatMessage> {
+    try {
+      const conversation = await Conversation.findOne({ project: projectId });
+      if (!conversation) {
+        throw new Error('Conversation not found');
+      }
+
+      const message = await Message.findById(messageId);
+      if (!message) {
+        throw new Error('Message not found');
+      }
+
+      // Create thread from the message
+      await message.createThread(title);
+
+      // Get updated message with thread info
+      const updatedMessage = await Message.findById(messageId)
+        .populate('sender.id', 'email role')
+        .exec();
+
+      if (!updatedMessage) {
+        throw new Error('Failed to update message');
+      }
+
+      return {
+        id: (updatedMessage._id as any).toString(),
+        projectId,
+        userId: updatedMessage.sender.id.toString(),
+        userEmail: updatedMessage.sender.name,
+        userRole: updatedMessage.sender.type,
+        message: updatedMessage.content,
+        type: updatedMessage.messageType as 'text' | 'file' | 'link' | 'system',
+        // Threading fields
+        parentMessageId: updatedMessage.parentMessageId?.toString(),
+        threadId: updatedMessage.threadId?.toString(),
+        threadTitle: updatedMessage.threadTitle,
+        threadDepth: updatedMessage.threadDepth || 0,
+        threadPosition: updatedMessage.threadPosition || 0,
+        isThreadRoot: updatedMessage.isThreadRoot || false,
+        threadMessageCount: updatedMessage.threadMessageCount || 0,
+        metadata: updatedMessage.metadata
+          ? {
+              ...updatedMessage.metadata,
+              milestoneId: updatedMessage.metadata.milestoneId?.toString(),
+              artifactId: updatedMessage.metadata.artifactId?.toString(),
+            }
+          : undefined,
+        timestamp: updatedMessage.createdAt.toISOString(),
+        isPersonaMessage: updatedMessage.sender.type === 'persona',
+        personaId:
+          updatedMessage.sender.type === 'persona'
+            ? updatedMessage.sender.id.toString()
+            : undefined,
+      };
+    } catch (error) {
+      logger.error('Error creating thread:', error);
+      throw new Error('Failed to create thread');
+    }
+  }
+
+  /**
+   * Reply to a message in a thread
+   */
+  public async replyToMessage(
+    projectId: string,
+    parentMessageId: string,
+    messageData: Omit<ChatMessage, 'id' | 'timestamp' | 'projectId'>
+  ): Promise<ChatMessage> {
+    try {
+      const conversation = await Conversation.findOne({ project: projectId });
+      if (!conversation) {
+        throw new Error('Conversation not found');
+      }
+
+      const parentMessage = await Message.findById(parentMessageId);
+      if (!parentMessage) {
+        throw new Error('Parent message not found');
+      }
+
+      // Create the reply message
+      const replyMessage = new Message({
+        conversation: conversation._id,
+        sender: {
+          type: messageData.isPersonaMessage ? 'persona' : 'student',
+          id: messageData.userId,
+          name: messageData.userEmail,
+        },
+        content: messageData.message,
+        messageType: messageData.type,
+        metadata: messageData.metadata,
+        isRead: false,
+        readBy: [],
+        // Threading defaults
+        threadDepth: 0,
+        threadPosition: 0,
+        isThreadRoot: false,
+        threadMessageCount: 0,
+      });
+
+      // Add to thread
+      await replyMessage.addToThread(parentMessageId);
+      await replyMessage.save();
+
+      // Populate sender info
+      await replyMessage.populate('sender.id', 'email role');
+
+      const chatMessage: ChatMessage = {
+        id: (replyMessage._id as any).toString(),
+        projectId,
+        userId: replyMessage.sender.id.toString(),
+        userEmail: replyMessage.sender.name,
+        userRole: replyMessage.sender.type,
+        message: replyMessage.content,
+        type: replyMessage.messageType as 'text' | 'file' | 'link' | 'system',
+        // Threading fields
+        parentMessageId: replyMessage.parentMessageId?.toString(),
+        threadId: replyMessage.threadId?.toString(),
+        threadTitle: replyMessage.threadTitle,
+        threadDepth: replyMessage.threadDepth || 0,
+        threadPosition: replyMessage.threadPosition || 0,
+        isThreadRoot: replyMessage.isThreadRoot || false,
+        threadMessageCount: replyMessage.threadMessageCount || 0,
+        metadata: replyMessage.metadata
+          ? {
+              ...replyMessage.metadata,
+              milestoneId: replyMessage.metadata.milestoneId?.toString(),
+              artifactId: replyMessage.metadata.artifactId?.toString(),
+            }
+          : undefined,
+        timestamp: replyMessage.createdAt.toISOString(),
+        isPersonaMessage: replyMessage.sender.type === 'persona',
+        personaId:
+          replyMessage.sender.type === 'persona'
+            ? replyMessage.sender.id.toString()
+            : undefined,
+      };
+
+      // Broadcast to project room
+      webSocketManager.emitToProject(projectId, 'chat-message', chatMessage);
+
+      return chatMessage;
+    } catch (error) {
+      logger.error('Error replying to message:', error);
+      throw new Error('Failed to reply to message');
+    }
+  }
+
+  /**
+   * Get thread messages
+   */
+  public async getThreadMessages(
+    projectId: string,
+    threadId: string
+  ): Promise<ChatMessage[]> {
+    try {
+      const conversation = await Conversation.findOne({ project: projectId });
+      if (!conversation) {
+        return [];
+      }
+
+      const threadMessages = await Message.find({
+        conversation: conversation._id,
+        threadId: threadId,
+      })
+        .sort({ threadPosition: 1 })
+        .populate('sender.id', 'email role')
+        .exec();
+
+      return threadMessages.map(msg => ({
+        id: (msg._id as any).toString(),
+        projectId,
+        userId: msg.sender.id.toString(),
+        userEmail: msg.sender.name,
+        userRole: msg.sender.type,
+        message: msg.content,
+        type: msg.messageType as 'text' | 'file' | 'link' | 'system',
+        // Threading fields
+        parentMessageId: msg.parentMessageId?.toString(),
+        threadId: msg.threadId?.toString(),
+        threadTitle: msg.threadTitle,
+        threadDepth: msg.threadDepth || 0,
+        threadPosition: msg.threadPosition || 0,
+        isThreadRoot: msg.isThreadRoot || false,
+        threadMessageCount: msg.threadMessageCount || 0,
+        metadata: msg.metadata
+          ? {
+              ...msg.metadata,
+              milestoneId: msg.metadata.milestoneId?.toString(),
+              artifactId: msg.metadata.artifactId?.toString(),
+            }
+          : undefined,
+        timestamp: msg.createdAt.toISOString(),
+        isPersonaMessage: msg.sender.type === 'persona',
+        personaId:
+          msg.sender.type === 'persona' ? msg.sender.id.toString() : undefined,
+      }));
+    } catch (error) {
+      logger.error('Error getting thread messages:', error);
+      throw new Error('Failed to get thread messages');
+    }
+  }
+
+  /**
+   * Get thread list for a project
+   */
+  public async getThreadList(
+    projectId: string,
+    limit: number = 20,
+    offset: number = 0
+  ): Promise<ChatMessage[]> {
+    try {
+      const conversation = await Conversation.findOne({ project: projectId });
+      if (!conversation) {
+        return [];
+      }
+
+      const threadRoots = await Message.find({
+        conversation: conversation._id,
+        isThreadRoot: true,
+      })
+        .sort({ createdAt: -1 })
+        .limit(limit)
+        .skip(offset)
+        .populate('sender.id', 'email role')
+        .exec();
+
+      return threadRoots.map(msg => ({
+        id: (msg._id as any).toString(),
+        projectId,
+        userId: msg.sender.id.toString(),
+        userEmail: msg.sender.name,
+        userRole: msg.sender.type,
+        message: msg.content,
+        type: msg.messageType as 'text' | 'file' | 'link' | 'system',
+        // Threading fields
+        parentMessageId: msg.parentMessageId?.toString(),
+        threadId: msg.threadId?.toString(),
+        threadTitle: msg.threadTitle,
+        threadDepth: msg.threadDepth || 0,
+        threadPosition: msg.threadPosition || 0,
+        isThreadRoot: msg.isThreadRoot || false,
+        threadMessageCount: msg.threadMessageCount || 0,
+        metadata: msg.metadata
+          ? {
+              ...msg.metadata,
+              milestoneId: msg.metadata.milestoneId?.toString(),
+              artifactId: msg.metadata.artifactId?.toString(),
+            }
+          : undefined,
+        timestamp: msg.createdAt.toISOString(),
+        isPersonaMessage: msg.sender.type === 'persona',
+        personaId:
+          msg.sender.type === 'persona' ? msg.sender.id.toString() : undefined,
+      }));
+    } catch (error) {
+      logger.error('Error getting thread list:', error);
+      throw new Error('Failed to get thread list');
     }
   }
 

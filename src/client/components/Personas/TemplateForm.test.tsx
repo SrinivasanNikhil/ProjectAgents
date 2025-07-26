@@ -95,7 +95,7 @@ describe('TemplateForm', () => {
     render(<TemplateForm onSubmit={mockOnSubmit} onCancel={mockOnCancel} />);
 
     const traitInput = screen.getByPlaceholderText('Add a personality trait');
-    const addButton = screen.getByText('Add');
+    const addButton = screen.getByText('Add Trait');
 
     fireEvent.change(traitInput, { target: { value: 'analytical' } });
     fireEvent.click(addButton);
@@ -126,7 +126,7 @@ describe('TemplateForm', () => {
     render(<TemplateForm onSubmit={mockOnSubmit} onCancel={mockOnCancel} />);
 
     const priorityInput = screen.getByPlaceholderText('Add a priority');
-    const addButton = screen.getAllByText('Add')[1]; // Second Add button
+    const addButton = screen.getByText('Add Priority');
 
     fireEvent.change(priorityInput, { target: { value: 'quality' } });
     fireEvent.click(addButton);
@@ -140,7 +140,7 @@ describe('TemplateForm', () => {
     render(<TemplateForm onSubmit={mockOnSubmit} onCancel={mockOnCancel} />);
 
     const goalInput = screen.getByPlaceholderText('Add a goal');
-    const addButton = screen.getAllByText('Add')[2]; // Third Add button
+    const addButton = screen.getByText('Add Goal');
 
     fireEvent.change(goalInput, { target: { value: 'achieve excellence' } });
     fireEvent.click(addButton);
@@ -154,7 +154,7 @@ describe('TemplateForm', () => {
     render(<TemplateForm onSubmit={mockOnSubmit} onCancel={mockOnCancel} />);
 
     const tagInput = screen.getByPlaceholderText('Add a tag');
-    const addButton = screen.getAllByText('Add')[0]; // First Add button
+    const addButton = screen.getByText('Add Tag');
 
     fireEvent.change(tagInput, { target: { value: 'test-tag' } });
     fireEvent.click(addButton);
@@ -218,6 +218,7 @@ describe('TemplateForm', () => {
         onSubmit={mockOnSubmit}
         onCancel={mockOnCancel}
         initialData={mockInitialData}
+        isEditing={true}
       />
     );
 
@@ -358,7 +359,7 @@ describe('TemplateForm', () => {
     );
 
     const traitInput = screen.getByPlaceholderText('Add a personality trait');
-    const addButton = screen.getByText('Add');
+    const addButton = screen.getByText('Add Trait');
 
     expect(addButton).toBeDisabled();
   });
@@ -382,7 +383,7 @@ describe('TemplateForm', () => {
     );
 
     const priorityInput = screen.getByPlaceholderText('Add a priority');
-    const addButton = screen.getAllByText('Add')[1];
+    const addButton = screen.getByText('Add Priority');
 
     expect(addButton).toBeDisabled();
   });
@@ -406,7 +407,7 @@ describe('TemplateForm', () => {
     );
 
     const goalInput = screen.getByPlaceholderText('Add a goal');
-    const addButton = screen.getAllByText('Add')[2];
+    const addButton = screen.getByText('Add Goal');
 
     expect(addButton).toBeDisabled();
   });
@@ -424,7 +425,7 @@ describe('TemplateForm', () => {
     );
 
     const tagInput = screen.getByPlaceholderText('Add a tag');
-    const addButton = screen.getAllByText('Add')[0];
+    const addButton = screen.getByText('Add Tag');
 
     expect(addButton).toBeDisabled();
   });
@@ -485,6 +486,7 @@ describe('TemplateForm', () => {
         onSubmit={mockOnSubmit}
         onCancel={mockOnCancel}
         initialData={mockInitialData}
+        isEditing={true}
       />
     );
 

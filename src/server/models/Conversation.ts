@@ -9,6 +9,14 @@ export interface IMessage extends Document {
   };
   content: string;
   messageType: 'text' | 'file' | 'link' | 'milestone' | 'system';
+  // Threading support
+  parentMessageId?: Types.ObjectId;
+  threadId?: Types.ObjectId;
+  threadTitle?: string;
+  threadDepth: number;
+  threadPosition: number; // Position within thread
+  isThreadRoot: boolean;
+  threadMessageCount: number; // Number of messages in this thread
   attachments?: Array<{
     type: string;
     filename: string;
@@ -31,6 +39,12 @@ export interface IMessage extends Document {
   readBy: Types.ObjectId[];
   createdAt: Date;
   updatedAt: Date;
+  // Methods
+  markAsRead(userId: Types.ObjectId): Promise<IMessage>;
+  createThread(title?: string): Promise<IMessage>;
+  addToThread(parentMessageId: Types.ObjectId): Promise<IMessage>;
+  getThreadMessages(): Promise<IMessage[]>;
+  getThreadRoot(): Promise<IMessage | null>;
 }
 
 export interface IConversation extends Document {
@@ -93,6 +107,39 @@ const messageSchema = new Schema<IMessage>(
       type: String,
       enum: ['text', 'file', 'link', 'milestone', 'system'],
       default: 'text',
+    },
+    // Threading support
+    parentMessageId: {
+      type: Schema.Types.ObjectId,
+      ref: 'Message',
+    },
+    threadId: {
+      type: Schema.Types.ObjectId,
+      ref: 'Message',
+    },
+    threadTitle: {
+      type: String,
+      trim: true,
+      maxlength: [200, 'Thread title cannot exceed 200 characters'],
+    },
+    threadDepth: {
+      type: Number,
+      default: 0,
+      min: [0, 'Thread depth cannot be negative'],
+    },
+    threadPosition: {
+      type: Number,
+      default: 0,
+      min: [0, 'Thread position cannot be negative'],
+    },
+    isThreadRoot: {
+      type: Boolean,
+      default: false,
+    },
+    threadMessageCount: {
+      type: Number,
+      default: 0,
+      min: [0, 'Thread message count cannot be negative'],
     },
     attachments: [
       {
@@ -271,6 +318,11 @@ const conversationSchema = new Schema<IConversation>(
 messageSchema.index({ conversation: 1, createdAt: -1 });
 messageSchema.index({ 'sender.id': 1 });
 messageSchema.index({ messageType: 1 });
+// Threading indexes
+messageSchema.index({ threadId: 1, threadPosition: 1 });
+messageSchema.index({ parentMessageId: 1 });
+messageSchema.index({ isThreadRoot: 1 });
+messageSchema.index({ conversation: 1, isThreadRoot: 1, createdAt: -1 });
 
 conversationSchema.index({ project: 1 });
 conversationSchema.index({ 'participants.id': 1 });
@@ -285,6 +337,71 @@ messageSchema.methods.markAsRead = function (userId: Types.ObjectId) {
   }
   this.isRead = true;
   return this.save();
+};
+
+// Thread management methods
+messageSchema.methods.createThread = async function (title?: string) {
+  this.isThreadRoot = true;
+  this.threadId = this._id;
+  this.threadTitle = title || this.content.substring(0, 50) + '...';
+  this.threadDepth = 0;
+  this.threadPosition = 0;
+  this.threadMessageCount = 1;
+  return this.save();
+};
+
+messageSchema.methods.addToThread = async function (
+  parentMessageId: Types.ObjectId
+) {
+  const parentMessage = await Message.findById(parentMessageId);
+  if (!parentMessage) {
+    throw new Error('Parent message not found');
+  }
+
+  // Get the thread root
+  const threadRoot = parentMessage.isThreadRoot
+    ? parentMessage
+    : await Message.findById(parentMessage.threadId);
+  if (!threadRoot) {
+    throw new Error('Thread root not found');
+  }
+
+  // Calculate thread position
+  const threadMessages = await Message.find({ threadId: threadRoot._id }).sort({
+    threadPosition: 1,
+  });
+  const nextPosition = threadMessages.length;
+
+  // Set thread properties
+  this.parentMessageId = parentMessageId;
+  this.threadId = threadRoot._id;
+  this.threadDepth = parentMessage.threadDepth + 1;
+  this.threadPosition = nextPosition;
+  this.isThreadRoot = false;
+
+  // Update thread root message count
+  threadRoot.threadMessageCount += 1;
+  await threadRoot.save();
+
+  return this.save();
+};
+
+messageSchema.methods.getThreadMessages = async function () {
+  if (!this.threadId) {
+    return [this];
+  }
+
+  return await Message.find({ threadId: this.threadId })
+    .sort({ threadPosition: 1 })
+    .populate('sender.id', 'email role')
+    .exec();
+};
+
+messageSchema.methods.getThreadRoot = async function () {
+  if (this.isThreadRoot) {
+    return this;
+  }
+  return await Message.findById(this.threadId);
 };
 
 // Method to update conversation last message

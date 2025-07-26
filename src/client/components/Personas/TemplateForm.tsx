@@ -200,7 +200,7 @@ const TemplateForm: React.FC<TemplateFormProps> = ({
     setFormData(prev => ({
       ...prev,
       [parent]: {
-        ...prev[parent as keyof TemplateFormData],
+        ...(prev[parent as keyof TemplateFormData] || {}),
         [field]: value,
       },
     }));
@@ -212,7 +212,7 @@ const TemplateForm: React.FC<TemplateFormProps> = ({
       template: {
         ...prev.template,
         [parent]: {
-          ...prev.template[parent as keyof typeof prev.template],
+          ...(prev.template as any)[parent],
           [field]: value,
         },
       },
@@ -377,10 +377,14 @@ Respond in character as this persona, maintaining consistency with the defined p
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label
+                htmlFor="template-name"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
                 Template Name *
               </label>
               <input
+                id="template-name"
                 type="text"
                 value={formData.name}
                 onChange={e => handleInputChange('name', e.target.value)}
@@ -395,10 +399,14 @@ Respond in character as this persona, maintaining consistency with the defined p
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label
+                htmlFor="template-category"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
                 Category *
               </label>
               <select
+                id="template-category"
                 value={formData.category}
                 onChange={e => handleInputChange('category', e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -413,10 +421,14 @@ Respond in character as this persona, maintaining consistency with the defined p
           </div>
 
           <div className="mt-4">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label
+              htmlFor="template-description"
+              className="block text-sm font-medium text-gray-700 mb-2"
+            >
               Description *
             </label>
             <textarea
+              id="template-description"
               value={formData.description}
               onChange={e => handleInputChange('description', e.target.value)}
               rows={3}
@@ -431,11 +443,15 @@ Respond in character as this persona, maintaining consistency with the defined p
           </div>
 
           <div className="mt-4">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label
+              htmlFor="template-tags"
+              className="block text-sm font-medium text-gray-700 mb-2"
+            >
               Tags
             </label>
             <div className="flex gap-2 mb-2">
               <input
+                id="template-tags"
                 type="text"
                 value={currentTag}
                 onChange={e => setCurrentTag(e.target.value)}
@@ -451,7 +467,7 @@ Respond in character as this persona, maintaining consistency with the defined p
                 disabled={!currentTag.trim() || formData.tags.length >= 10}
                 className="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 disabled:bg-gray-300 disabled:cursor-not-allowed"
               >
-                Add
+                Add Tag
               </button>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -496,10 +512,14 @@ Respond in character as this persona, maintaining consistency with the defined p
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label
+                htmlFor="template-role"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
                 Role *
               </label>
               <input
+                id="template-role"
                 type="text"
                 value={formData.template.role}
                 onChange={e =>
@@ -517,10 +537,14 @@ Respond in character as this persona, maintaining consistency with the defined p
           </div>
 
           <div className="mt-4">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label
+              htmlFor="template-background"
+              className="block text-sm font-medium text-gray-700 mb-2"
+            >
               Background *
             </label>
             <textarea
+              id="template-background"
               value={formData.template.background}
               onChange={e =>
                 handleTemplateChange('background', 'background', e.target.value)
@@ -538,11 +562,15 @@ Respond in character as this persona, maintaining consistency with the defined p
 
           {/* Personality Traits */}
           <div className="mt-4">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label
+              htmlFor="template-traits"
+              className="block text-sm font-medium text-gray-700 mb-2"
+            >
               Personality Traits * (3-10 traits)
             </label>
             <div className="flex gap-2 mb-2">
               <input
+                id="template-traits"
                 type="text"
                 value={currentTrait}
                 onChange={e => setCurrentTrait(e.target.value)}
@@ -561,7 +589,7 @@ Respond in character as this persona, maintaining consistency with the defined p
                 }
                 className="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 disabled:bg-gray-300 disabled:cursor-not-allowed"
               >
-                Add
+                Add Trait
               </button>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -589,10 +617,14 @@ Respond in character as this persona, maintaining consistency with the defined p
           {/* Communication and Decision Making Styles */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label
+                htmlFor="template-communication-style"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
                 Communication Style
               </label>
               <select
+                id="template-communication-style"
                 value={formData.template.personality.communicationStyle}
                 onChange={e =>
                   handleTemplateChange(
@@ -612,10 +644,14 @@ Respond in character as this persona, maintaining consistency with the defined p
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label
+                htmlFor="template-decision-making-style"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
                 Decision Making Style
               </label>
               <select
+                id="template-decision-making-style"
                 value={formData.template.personality.decisionMakingStyle}
                 onChange={e =>
                   handleTemplateChange(
@@ -637,11 +673,15 @@ Respond in character as this persona, maintaining consistency with the defined p
 
           {/* Priorities */}
           <div className="mt-4">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label
+              htmlFor="template-priorities"
+              className="block text-sm font-medium text-gray-700 mb-2"
+            >
               Priorities * (2-8 priorities)
             </label>
             <div className="flex gap-2 mb-2">
               <input
+                id="template-priorities"
                 type="text"
                 value={currentPriority}
                 onChange={e => setCurrentPriority(e.target.value)}
@@ -660,7 +700,7 @@ Respond in character as this persona, maintaining consistency with the defined p
                 }
                 className="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 disabled:bg-gray-300 disabled:cursor-not-allowed"
               >
-                Add
+                Add Priority
               </button>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -689,11 +729,15 @@ Respond in character as this persona, maintaining consistency with the defined p
 
           {/* Goals */}
           <div className="mt-4">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label
+              htmlFor="template-goals"
+              className="block text-sm font-medium text-gray-700 mb-2"
+            >
               Goals * (1-5 goals)
             </label>
             <div className="flex gap-2 mb-2">
               <input
+                id="template-goals"
                 type="text"
                 value={currentGoal}
                 onChange={e => setCurrentGoal(e.target.value)}
@@ -712,7 +756,7 @@ Respond in character as this persona, maintaining consistency with the defined p
                 }
                 className="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 disabled:bg-gray-300 disabled:cursor-not-allowed"
               >
-                Add
+                Add Goal
               </button>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -746,10 +790,14 @@ Respond in character as this persona, maintaining consistency with the defined p
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label
+                htmlFor="template-ai-model"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
                 AI Model
               </label>
               <select
+                id="template-ai-model"
                 value={formData.template.aiConfiguration.model}
                 onChange={e =>
                   handleTemplateChange(
@@ -769,10 +817,14 @@ Respond in character as this persona, maintaining consistency with the defined p
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label
+                htmlFor="template-temperature"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
                 Temperature: {formData.template.aiConfiguration.temperature}
               </label>
               <input
+                id="template-temperature"
                 type="range"
                 min="0"
                 max="2"
@@ -795,7 +847,10 @@ Respond in character as this persona, maintaining consistency with the defined p
           </div>
 
           <div className="mt-4">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label
+              htmlFor="template-system-prompt"
+              className="block text-sm font-medium text-gray-700 mb-2"
+            >
               System Prompt *
             </label>
             <div className="flex gap-2 mb-2">
@@ -808,6 +863,7 @@ Respond in character as this persona, maintaining consistency with the defined p
               </button>
             </div>
             <textarea
+              id="template-system-prompt"
               value={formData.template.aiConfiguration.systemPrompt}
               onChange={e =>
                 handleTemplateChange(
@@ -836,10 +892,14 @@ Respond in character as this persona, maintaining consistency with the defined p
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label
+                htmlFor="template-response-time"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
                 Response Time (minutes)
               </label>
               <input
+                id="template-response-time"
                 type="number"
                 min="1"
                 max="1440"
@@ -856,10 +916,14 @@ Respond in character as this persona, maintaining consistency with the defined p
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label
+                htmlFor="template-start-time"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
                 Start Time
               </label>
               <input
+                id="template-start-time"
                 type="time"
                 value={formData.template.availability.workingHours.start}
                 onChange={e =>
@@ -873,10 +937,14 @@ Respond in character as this persona, maintaining consistency with the defined p
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label
+                htmlFor="template-end-time"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
                 End Time
               </label>
               <input
+                id="template-end-time"
                 type="time"
                 value={formData.template.availability.workingHours.end}
                 onChange={e =>
