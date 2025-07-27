@@ -18,6 +18,7 @@ import { aiService } from './config/ai';
 // Import routes
 import authRoutes from './routes/auth';
 import artifactRoutes from './routes/artifacts';
+import analyticsRoutes from './routes/analytics';
 import monitoringRoutes from './routes/monitoring';
 import personaRoutes from './routes/personas';
 import chatRoutes from './routes/chat';
@@ -137,6 +138,7 @@ app.get('/health', async (req, res) => {
 // API routes
 app.use('/api/auth', authRoutes);
 app.use('/api/artifacts', artifactRoutes);
+app.use('/api/analytics', analyticsRoutes);
 app.use('/api/monitoring', monitoringRoutes);
 app.use('/api/personas', personaRoutes);
 app.use('/api/chat', chatRoutes);

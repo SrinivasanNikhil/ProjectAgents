@@ -54,8 +54,8 @@
 - `src/server/routes/personas.test.ts` - Unit tests for persona routes
 - `src/server/routes/chat.ts` - Real-time chat routes
 - `src/server/routes/chat.test.ts` - Unit tests for chat routes
-- `src/server/routes/analytics.ts` - Analytics and monitoring routes
-- `src/server/routes/analytics.test.ts` - Unit tests for analytics routes
+- `src/server/routes/analytics.ts` - Analytics and monitoring routes with conversation analytics, persona analytics, team performance, interaction patterns, department analytics, export functionality, and batch processing endpoints
+- `src/server/routes/analytics.test.ts` - Unit tests for analytics routes with comprehensive test coverage
 - `src/server/routes/milestones.ts` - Milestone and assessment routes
 - `src/server/routes/milestones.test.ts` - Unit tests for milestone routes
 - `src/server/routes/artifacts.ts` - File upload and artifact routes with comprehensive CRUD operations
@@ -75,8 +75,8 @@
 - `src/server/services/personaService.test.ts` - Unit tests for persona service
 - `src/server/services/chatService.ts` - Real-time chat and messaging logic with WebSocket integration, message persistence, and conversation management
 - `src/server/services/chatService.test.ts` - Unit tests for chat service
-- `src/server/services/analyticsService.ts` - Analytics and reporting logic
-- `src/server/services/analyticsService.test.ts` - Unit tests for analytics service
+- `src/server/services/analyticsService.ts` - Analytics and reporting logic with comprehensive data collection, processing, conversation analytics, persona performance metrics, team performance tracking, interaction patterns analysis, department-wide analytics, and conversation log export functionality
+- `src/server/services/analyticsService.test.ts` - Unit tests for analytics service with comprehensive test coverage
 - `src/server/services/milestoneService.ts` - Milestone and assessment logic
 - `src/server/services/milestoneService.test.ts` - Unit tests for milestone service
 - `src/server/services/fileService.ts` - File upload and storage logic with S3 and local storage support
@@ -212,7 +212,7 @@
 - [ ] 4.0 Instructor Dashboard and Analytics
   - [x] 4.1 Build instructor dashboard layout and navigation
   - [x] 4.2 Create conversation monitoring interface
-  - [ ] 4.3 Implement analytics data collection and processing
+  - [x] 4.3 Implement analytics data collection and processing
   - [ ] 4.4 Build analytics visualization components
   - [ ] 4.5 Create team performance tracking system
   - [ ] 4.6 Implement interaction pattern analysis
