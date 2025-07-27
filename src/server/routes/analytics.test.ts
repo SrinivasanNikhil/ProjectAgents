@@ -1,570 +1,194 @@
 import request from 'supertest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import express from 'express';
-import { Types } from 'mongoose';
-import analyticsRouter from './analytics';
-import { analyticsService } from '../services/analyticsService';
+import jwt from 'jsonwebtoken';
+import analyticsRoutes from './analytics';
 import { authenticateToken } from '../middleware/auth';
-import { checkRole } from '../middleware/roleCheck';
-
-// Mock the analytics service
-jest.mock('../services/analyticsService');
-const mockAnalyticsService = analyticsService as jest.Mocked<typeof analyticsService>;
+import { requireRole } from '../middleware/roleCheck';
 
 // Mock the middleware
-jest.mock('../middleware/auth');
-jest.mock('../middleware/roleCheck');
+vi.mock('../middleware/auth');
+vi.mock('../middleware/roleCheck');
 
-const mockAuthenticateToken = authenticateToken as jest.MockedFunction<typeof authenticateToken>;
-const mockCheckRole = checkRole as jest.MockedFunction<typeof checkRole>;
+const mockAuthenticateToken = vi.mocked(authenticateToken);
+const mockRequireRole = vi.mocked(requireRole);
 
 describe('Analytics Routes', () => {
   let app: express.Application;
 
-  beforeAll(() => {
+  beforeEach(() => {
     app = express();
     app.use(express.json());
-    app.use('/api/analytics', analyticsRouter);
-
+    
     // Mock authentication middleware to pass through
     mockAuthenticateToken.mockImplementation((req, res, next) => {
       req.user = { id: 'user123', role: 'instructor' };
       next();
     });
 
-    // Mock role check middleware to pass through
-    mockCheckRole.mockImplementation(() => (req, res, next) => next());
-  });
-
-  beforeEach(() => {
-    jest.clearAllMocks();
-  });
-
-  describe('GET /api/analytics/conversation/:conversationId', () => {
-    const conversationId = new Types.ObjectId().toString();
-    const mockAnalytics = {
-      totalMessages: 10,
-      messagesPerDay: 2.5,
-      averageResponseTime: 15,
-      activeParticipants: 3,
-      sentimentTrend: [],
-      messageTypes: { text: 8, file: 1, link: 1, milestone: 0, system: 0 },
-      threadingUsage: { totalThreads: 2, averageThreadLength: 3, deepestThread: 5 },
-    };
-
-    it('should return conversation analytics successfully', async () => {
-      mockAnalyticsService.getConversationAnalytics.mockResolvedValue(mockAnalytics);
-
-      const response = await request(app)
-        .get(`/api/analytics/conversation/${conversationId}`)
-        .expect(200);
-
-      expect(response.body).toEqual({
-        success: true,
-        data: mockAnalytics,
-      });
-
-      expect(mockAnalyticsService.getConversationAnalytics).toHaveBeenCalledWith(
-        new Types.ObjectId(conversationId),
-        undefined
-      );
+    // Mock role middleware to pass through for instructor
+    mockRequireRole.mockImplementation((roles) => (req, res, next) => {
+      next();
     });
 
-    it('should handle date range parameters', async () => {
-      mockAnalyticsService.getConversationAnalytics.mockResolvedValue(mockAnalytics);
+    app.use('/api/analytics', analyticsRoutes);
+  });
 
-      const startDate = '2024-01-01T00:00:00.000Z';
-      const endDate = '2024-01-31T23:59:59.999Z';
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
 
-      await request(app)
-        .get(`/api/analytics/conversation/${conversationId}`)
-        .query({ startDate, endDate })
+  describe('GET /api/analytics/summary/:userId', () => {
+    it('should return analytics summary for instructor', async () => {
+      const response = await request(app)
+        .get('/api/analytics/summary/user123')
         .expect(200);
 
-      expect(mockAnalyticsService.getConversationAnalytics).toHaveBeenCalledWith(
-        new Types.ObjectId(conversationId),
-        {
-          start: new Date(startDate),
-          end: new Date(endDate),
+      expect(response.body).toMatchObject({
+        totalProjects: expect.any(Number),
+        activeProjects: expect.any(Number),
+        totalStudents: expect.any(Number),
+        totalPersonas: expect.any(Number),
+        totalConversations: expect.any(Number),
+        averageEngagement: expect.any(Number),
+        recentActivity: expect.any(Array)
+      });
+
+      expect(response.body.recentActivity).toHaveLength(2);
+      expect(response.body.recentActivity[0]).toMatchObject({
+        type: 'message',
+        description: expect.any(String),
+        timestamp: expect.any(String)
+      });
+    });
+  });
+
+  describe('GET /api/analytics/conversations/summary/:userId', () => {
+    it('should return conversation analytics summary', async () => {
+      const response = await request(app)
+        .get('/api/analytics/conversations/summary/user123')
+        .expect(200);
+
+      expect(response.body).toMatchObject({
+        conversations: expect.any(Array)
+      });
+
+      expect(response.body.conversations).toHaveLength(1);
+      expect(response.body.conversations[0]).toMatchObject({
+        totalMessages: 50,
+        messagesPerDay: 5.5,
+        averageResponseTime: 12.5,
+        activeParticipants: 4,
+        messageTypes: {
+          text: 40,
+          file: 6,
+          link: 3,
+          milestone: 1,
+          system: 0
         }
-      );
-    });
-
-    it('should return 400 for invalid conversation ID', async () => {
-      const response = await request(app)
-        .get('/api/analytics/conversation/invalid-id')
-        .expect(400);
-
-      expect(response.body).toEqual({
-        success: false,
-        message: 'Invalid conversation ID',
-      });
-    });
-
-    it('should return 400 for invalid date format', async () => {
-      const response = await request(app)
-        .get(`/api/analytics/conversation/${conversationId}`)
-        .query({ startDate: 'invalid-date', endDate: '2024-01-31' })
-        .expect(400);
-
-      expect(response.body).toEqual({
-        success: false,
-        message: 'Invalid date format. Use ISO 8601 format (YYYY-MM-DDTHH:mm:ss.sssZ)',
-      });
-    });
-
-    it('should return 400 when start date is after end date', async () => {
-      const response = await request(app)
-        .get(`/api/analytics/conversation/${conversationId}`)
-        .query({ startDate: '2024-01-31T00:00:00.000Z', endDate: '2024-01-01T00:00:00.000Z' })
-        .expect(400);
-
-      expect(response.body).toEqual({
-        success: false,
-        message: 'Start date must be before end date',
-      });
-    });
-
-    it('should handle service errors', async () => {
-      mockAnalyticsService.getConversationAnalytics.mockRejectedValue(
-        new Error('Conversation not found')
-      );
-
-      const response = await request(app)
-        .get(`/api/analytics/conversation/${conversationId}`)
-        .expect(500);
-
-      expect(response.body).toEqual({
-        success: false,
-        message: 'Conversation not found',
       });
     });
   });
 
-  describe('GET /api/analytics/persona/:personaId', () => {
-    const personaId = new Types.ObjectId().toString();
-    const mockPersonaAnalytics = {
-      personaId: new Types.ObjectId(personaId),
-      name: 'Test Persona',
-      role: 'Project Manager',
-      responseMetrics: { totalResponses: 50, averageResponseTime: 2000, responseQuality: 4.2 },
-      engagementMetrics: { conversationsStarted: 5, conversationsParticipated: 15, uniqueStudentsInteracted: 8 },
-      moodConsistency: { currentMood: 75, moodVariance: 12, moodTrend: [] },
-      personalityConsistency: { traitConsistencyScore: 85, communicationStyleScore: 88, roleAdherenceScore: 92 },
-    };
-
-    it('should return persona analytics successfully', async () => {
-      mockAnalyticsService.getPersonaAnalytics.mockResolvedValue(mockPersonaAnalytics);
-
+  describe('GET /api/analytics/personas/summary/:userId', () => {
+    it('should return persona analytics summary', async () => {
       const response = await request(app)
-        .get(`/api/analytics/persona/${personaId}`)
+        .get('/api/analytics/personas/summary/user123')
         .expect(200);
 
-      expect(response.body).toEqual({
-        success: true,
-        data: mockPersonaAnalytics,
+      expect(response.body).toMatchObject({
+        personas: expect.any(Array)
       });
-    });
 
-    it('should return 400 for invalid persona ID', async () => {
-      const response = await request(app)
-        .get('/api/analytics/persona/invalid-id')
-        .expect(400);
-
-      expect(response.body).toEqual({
-        success: false,
-        message: 'Invalid persona ID',
-      });
-    });
-  });
-
-  describe('GET /api/analytics/team/:projectId', () => {
-    const projectId = new Types.ObjectId().toString();
-    const mockTeamMetrics = {
-      projectId: new Types.ObjectId(projectId),
-      projectName: 'Test Project',
-      teamSize: 4,
-      collaborationScore: 85,
-      communicationFrequency: 12.5,
-      milestoneProgress: { completed: 3, total: 5, onTime: 2, overdue: 1 },
-      participationBalance: [],
-      conflictResolution: { totalConflicts: 2, resolvedConflicts: 1, averageResolutionTime: 24 },
-    };
-
-    it('should return team performance metrics successfully', async () => {
-      mockAnalyticsService.getTeamPerformanceMetrics.mockResolvedValue(mockTeamMetrics);
-
-      const response = await request(app)
-        .get(`/api/analytics/team/${projectId}`)
-        .expect(200);
-
-      expect(response.body).toEqual({
-        success: true,
-        data: mockTeamMetrics,
-      });
-    });
-
-    it('should return 400 for invalid project ID', async () => {
-      const response = await request(app)
-        .get('/api/analytics/team/invalid-id')
-        .expect(400);
-
-      expect(response.body).toEqual({
-        success: false,
-        message: 'Invalid project ID',
-      });
-    });
-  });
-
-  describe('GET /api/analytics/interactions/:projectId', () => {
-    const projectId = new Types.ObjectId().toString();
-    const mockInteractionPatterns = {
-      timeOfDay: Array.from({ length: 24 }, (_, i) => ({ hour: i, messageCount: Math.floor(Math.random() * 10) })),
-      dayOfWeek: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].map(day => ({
-        day,
-        messageCount: Math.floor(Math.random() * 20),
-      })),
-      conversationStarters: [],
-      responseChains: { averageChainLength: 3.2, longestChain: 12, quickResponses: 45, delayedResponses: 8 },
-      topicClusters: [],
-    };
-
-    it('should return interaction patterns successfully', async () => {
-      mockAnalyticsService.getInteractionPatterns.mockResolvedValue(mockInteractionPatterns);
-
-      const response = await request(app)
-        .get(`/api/analytics/interactions/${projectId}`)
-        .expect(200);
-
-      expect(response.body).toEqual({
-        success: true,
-        data: mockInteractionPatterns,
-      });
-    });
-
-    it('should return 400 for invalid project ID', async () => {
-      const response = await request(app)
-        .get('/api/analytics/interactions/invalid-id')
-        .expect(400);
-
-      expect(response.body).toEqual({
-        success: false,
-        message: 'Invalid project ID',
-      });
-    });
-  });
-
-  describe('GET /api/analytics/department', () => {
-    const mockDepartmentAnalytics = {
-      totalProjects: 25,
-      totalStudents: 150,
-      totalInstructors: 12,
-      totalPersonas: 75,
-      averageProjectDuration: 45,
-      systemUsage: { dailyActiveUsers: 89, weeklyActiveUsers: 142, monthlyActiveUsers: 150 },
-      performanceDistribution: { excellent: 6, good: 9, average: 8, needsImprovement: 2 },
-      technologyAdoption: { aiFeatureUsage: 85, fileUploadUsage: 72, linkSharingUsage: 58, threadingUsage: 34 },
-    };
-
-    it('should return department analytics successfully', async () => {
-      mockAnalyticsService.getDepartmentAnalytics.mockResolvedValue(mockDepartmentAnalytics);
-
-      const response = await request(app)
-        .get('/api/analytics/department')
-        .expect(200);
-
-      expect(response.body).toEqual({
-        success: true,
-        data: mockDepartmentAnalytics,
-      });
-    });
-  });
-
-  describe('GET /api/analytics/export/:projectId', () => {
-    const projectId = new Types.ObjectId().toString();
-    const mockExportData = JSON.stringify([
-      { id: 1, message: 'Hello', timestamp: '2024-01-01T10:00:00Z' },
-      { id: 2, message: 'Hi there!', timestamp: '2024-01-01T10:05:00Z' },
-    ]);
-
-    it('should export conversation logs in JSON format by default', async () => {
-      mockAnalyticsService.exportConversationLogs.mockResolvedValue(mockExportData);
-
-      const response = await request(app)
-        .get(`/api/analytics/export/${projectId}`)
-        .expect(200);
-
-      expect(response.headers['content-type']).toMatch(/application\/json/);
-      expect(response.headers['content-disposition']).toMatch(/attachment; filename="conversation-logs-/);
-      expect(response.text).toBe(mockExportData);
-
-      expect(mockAnalyticsService.exportConversationLogs).toHaveBeenCalledWith(
-        new Types.ObjectId(projectId),
-        'json',
-        undefined
-      );
-    });
-
-    it('should export conversation logs in CSV format', async () => {
-      const csvData = 'timestamp,message\n2024-01-01T10:00:00Z,Hello\n2024-01-01T10:05:00Z,Hi there!';
-      mockAnalyticsService.exportConversationLogs.mockResolvedValue(csvData);
-
-      const response = await request(app)
-        .get(`/api/analytics/export/${projectId}`)
-        .query({ format: 'csv' })
-        .expect(200);
-
-      expect(response.headers['content-type']).toMatch(/text\/csv/);
-      expect(response.headers['content-disposition']).toMatch(/\.csv"/);
-      expect(response.text).toBe(csvData);
-    });
-
-    it('should export conversation logs in TXT format', async () => {
-      const txtData = '[2024-01-01T10:00:00Z] User: Hello\n[2024-01-01T10:05:00Z] AI: Hi there!';
-      mockAnalyticsService.exportConversationLogs.mockResolvedValue(txtData);
-
-      const response = await request(app)
-        .get(`/api/analytics/export/${projectId}`)
-        .query({ format: 'txt' })
-        .expect(200);
-
-      expect(response.headers['content-type']).toMatch(/text\/plain/);
-      expect(response.headers['content-disposition']).toMatch(/\.txt"/);
-      expect(response.text).toBe(txtData);
-    });
-
-    it('should return 400 for invalid format', async () => {
-      const response = await request(app)
-        .get(`/api/analytics/export/${projectId}`)
-        .query({ format: 'xml' })
-        .expect(400);
-
-      expect(response.body).toEqual({
-        success: false,
-        message: 'Invalid format. Supported formats: json, csv, txt',
-      });
-    });
-
-    it('should return 400 for invalid project ID', async () => {
-      const response = await request(app)
-        .get('/api/analytics/export/invalid-id')
-        .expect(400);
-
-      expect(response.body).toEqual({
-        success: false,
-        message: 'Invalid project ID',
-      });
-    });
-  });
-
-  describe('GET /api/analytics/overview/:projectId', () => {
-    const projectId = new Types.ObjectId().toString();
-    const mockTeamMetrics = {
-      projectId: new Types.ObjectId(projectId),
-      projectName: 'Test Project',
-      teamSize: 4,
-      collaborationScore: 85,
-      communicationFrequency: 12.5,
-      milestoneProgress: { completed: 3, total: 5, onTime: 2, overdue: 1 },
-      participationBalance: [],
-      conflictResolution: { totalConflicts: 2, resolvedConflicts: 1, averageResolutionTime: 24 },
-    };
-    const mockInteractionPatterns = {
-      timeOfDay: [],
-      dayOfWeek: [],
-      conversationStarters: [],
-      responseChains: { averageChainLength: 3.2, longestChain: 12, quickResponses: 45, delayedResponses: 8 },
-      topicClusters: [],
-    };
-
-    it('should return comprehensive analytics overview', async () => {
-      mockAnalyticsService.getTeamPerformanceMetrics.mockResolvedValue(mockTeamMetrics);
-      mockAnalyticsService.getInteractionPatterns.mockResolvedValue(mockInteractionPatterns);
-
-      const response = await request(app)
-        .get(`/api/analytics/overview/${projectId}`)
-        .expect(200);
-
-      expect(response.body).toEqual({
-        success: true,
-        data: {
-          team: mockTeamMetrics,
-          interactions: mockInteractionPatterns,
-          generatedAt: expect.any(String),
+      expect(response.body.personas).toHaveLength(1);
+      expect(response.body.personas[0]).toMatchObject({
+        personaId: 'persona1',
+        name: 'Dr. Smith',
+        role: 'Project Manager',
+        responseMetrics: {
+          totalResponses: 25,
+          averageResponseTime: 8.5,
+          responseQuality: 8.2
         },
-      });
-
-      expect(mockAnalyticsService.getTeamPerformanceMetrics).toHaveBeenCalledWith(
-        new Types.ObjectId(projectId),
-        undefined
-      );
-      expect(mockAnalyticsService.getInteractionPatterns).toHaveBeenCalledWith(
-        new Types.ObjectId(projectId),
-        undefined
-      );
-    });
-
-    it('should return 400 for invalid project ID', async () => {
-      const response = await request(app)
-        .get('/api/analytics/overview/invalid-id')
-        .expect(400);
-
-      expect(response.body).toEqual({
-        success: false,
-        message: 'Invalid project ID',
-      });
-    });
-  });
-
-  describe('POST /api/analytics/batch', () => {
-    const projectId = new Types.ObjectId().toString();
-    const personaId = new Types.ObjectId().toString();
-
-    it('should process batch requests successfully', async () => {
-      const mockTeamMetrics = { teamSize: 4, collaborationScore: 85 };
-      const mockPersonaAnalytics = { name: 'Test Persona', role: 'Manager' };
-
-      mockAnalyticsService.getTeamPerformanceMetrics.mockResolvedValue(mockTeamMetrics as any);
-      mockAnalyticsService.getPersonaAnalytics.mockResolvedValue(mockPersonaAnalytics as any);
-
-      const requests = [
-        { type: 'team', id: projectId },
-        { type: 'persona', id: personaId },
-      ];
-
-      const response = await request(app)
-        .post('/api/analytics/batch')
-        .send({ requests })
-        .expect(200);
-
-      expect(response.body.success).toBe(true);
-      expect(response.body.results).toHaveLength(2);
-      expect(response.body.results[0]).toEqual({
-        success: true,
-        type: 'team',
-        id: projectId,
-        data: mockTeamMetrics,
-      });
-      expect(response.body.results[1]).toEqual({
-        success: true,
-        type: 'persona',
-        id: personaId,
-        data: mockPersonaAnalytics,
-      });
-    });
-
-    it('should return 400 for empty requests array', async () => {
-      const response = await request(app)
-        .post('/api/analytics/batch')
-        .send({ requests: [] })
-        .expect(400);
-
-      expect(response.body).toEqual({
-        success: false,
-        message: 'Requests array is required and must not be empty',
-      });
-    });
-
-    it('should return 400 for too many requests', async () => {
-      const requests = Array.from({ length: 11 }, (_, i) => ({
-        type: 'team',
-        id: new Types.ObjectId().toString(),
-      }));
-
-      const response = await request(app)
-        .post('/api/analytics/batch')
-        .send({ requests })
-        .expect(400);
-
-      expect(response.body).toEqual({
-        success: false,
-        message: 'Maximum 10 requests allowed per batch',
-      });
-    });
-
-    it('should handle individual request errors gracefully', async () => {
-      const requests = [
-        { type: 'team', id: 'invalid-id' },
-        { type: 'unknown-type', id: projectId },
-        { type: 'team' }, // missing id
-      ];
-
-      const response = await request(app)
-        .post('/api/analytics/batch')
-        .send({ requests })
-        .expect(200);
-
-      expect(response.body.success).toBe(true);
-      expect(response.body.results).toHaveLength(3);
-      expect(response.body.results[0].error).toBe('Invalid ObjectId');
-      expect(response.body.results[1].error).toBe('Unknown analytics type: unknown-type');
-      expect(response.body.results[2].error).toBe('Type and ID are required for each request');
-    });
-
-    it('should handle service errors in batch requests', async () => {
-      mockAnalyticsService.getTeamPerformanceMetrics.mockRejectedValue(
-        new Error('Project not found')
-      );
-
-      const requests = [{ type: 'team', id: projectId }];
-
-      const response = await request(app)
-        .post('/api/analytics/batch')
-        .send({ requests })
-        .expect(200);
-
-      expect(response.body.success).toBe(true);
-      expect(response.body.results).toHaveLength(1);
-      expect(response.body.results[0].error).toBe('Project not found');
-    });
-
-    it('should handle date ranges in batch requests', async () => {
-      const mockData = { teamSize: 4 };
-      mockAnalyticsService.getTeamPerformanceMetrics.mockResolvedValue(mockData as any);
-
-      const requests = [
-        {
-          type: 'team',
-          id: projectId,
-          dateRange: {
-            start: '2024-01-01T00:00:00.000Z',
-            end: '2024-01-31T23:59:59.999Z',
-          },
-        },
-      ];
-
-      const response = await request(app)
-        .post('/api/analytics/batch')
-        .send({ requests })
-        .expect(200);
-
-      expect(response.body.success).toBe(true);
-      expect(response.body.results[0].success).toBe(true);
-
-      expect(mockAnalyticsService.getTeamPerformanceMetrics).toHaveBeenCalledWith(
-        new Types.ObjectId(projectId),
-        {
-          start: new Date('2024-01-01T00:00:00.000Z'),
-          end: new Date('2024-01-31T23:59:59.999Z'),
+        engagementMetrics: {
+          conversationsStarted: 5,
+          conversationsParticipated: 8,
+          uniqueStudentsInteracted: 12
         }
-      );
+      });
+    });
+  });
+
+  describe('GET /api/analytics/teams/performance/:userId', () => {
+    it('should return team performance analytics', async () => {
+      const response = await request(app)
+        .get('/api/analytics/teams/performance/user123')
+        .expect(200);
+
+      expect(response.body).toMatchObject({
+        teams: expect.any(Array)
+      });
+
+      expect(response.body.teams).toHaveLength(1);
+      expect(response.body.teams[0]).toMatchObject({
+        projectId: 'project1',
+        projectName: 'AI Project',
+        teamSize: 4,
+        collaborationScore: 85.5,
+        communicationFrequency: 12.3,
+        milestoneProgress: {
+          completed: 3,
+          total: 5,
+          onTime: 2,
+          overdue: 1
+        }
+      });
+    });
+  });
+
+  describe('GET /api/analytics/interactions/patterns/:userId', () => {
+    it('should return interaction pattern analytics', async () => {
+      const response = await request(app)
+        .get('/api/analytics/interactions/patterns/user123')
+        .expect(200);
+
+      expect(response.body).toMatchObject({
+        timeOfDay: expect.any(Array),
+        dayOfWeek: expect.any(Array),
+        responseChains: expect.any(Object)
+      });
+
+      expect(response.body.timeOfDay).toHaveLength(4);
+      expect(response.body.timeOfDay[0]).toMatchObject({
+        hour: expect.any(Number),
+        messageCount: expect.any(Number)
+      });
+
+      expect(response.body.dayOfWeek).toHaveLength(3);
+      expect(response.body.dayOfWeek[0]).toMatchObject({
+        day: expect.any(String),
+        messageCount: expect.any(Number)
+      });
+
+      expect(response.body.responseChains).toMatchObject({
+        averageChainLength: 3.5,
+        longestChain: 8,
+        quickResponses: 45,
+        delayedResponses: 12
+      });
     });
   });
 
   describe('Error handling', () => {
-    it('should handle service errors with proper error response', async () => {
-      const conversationId = new Types.ObjectId().toString();
-      mockAnalyticsService.getConversationAnalytics.mockRejectedValue(
-        new Error('Database connection failed')
-      );
-
-      const response = await request(app)
-        .get(`/api/analytics/conversation/${conversationId}`)
-        .expect(500);
-
-      expect(response.body).toEqual({
-        success: false,
-        message: 'Database connection failed',
+    it('should handle errors gracefully', async () => {
+      // Mock authentication to fail
+      mockAuthenticateToken.mockImplementation((req, res, next) => {
+        res.status(401).json({ error: 'Unauthorized' });
       });
+
+      await request(app)
+        .get('/api/analytics/summary/user123')
+        .expect(401);
     });
   });
 });

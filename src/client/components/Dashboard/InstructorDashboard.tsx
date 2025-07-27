@@ -3,6 +3,7 @@ import axios from 'axios';
 import { PersonaManagementDashboard } from '../Personas/PersonaManagementDashboard';
 import ModerationDashboard from '../Chat/ModerationDashboard';
 import ConversationMonitor from './ConversationMonitor';
+import AnalyticsDashboard from '../Analytics/AnalyticsDashboard';
 import './InstructorDashboard.css';
 
 interface Project {
@@ -333,8 +334,7 @@ const InstructorDashboard: React.FC<InstructorDashboardProps> = ({ userId, userR
 
   const renderAnalytics = () => (
     <div className="dashboard-content analytics">
-      <h2>Analytics Dashboard</h2>
-      <p>Detailed analytics and reporting will be implemented in task 4.3-4.4</p>
+      <AnalyticsDashboard userId={userId} userRole={userRole} />
     </div>
   );
 
