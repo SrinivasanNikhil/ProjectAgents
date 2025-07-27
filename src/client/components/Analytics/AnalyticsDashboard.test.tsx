@@ -89,6 +89,41 @@ describe('AnalyticsDashboard', () => {
           onTime: 2,
           overdue: 1,
         },
+        participationBalance: [
+          {
+            studentId: 'student1',
+            studentName: 'John Doe',
+            messageCount: 25,
+            participationPercentage: 30,
+            lastActivity: '2024-01-15T10:00:00Z',
+          },
+          {
+            studentId: 'student2',
+            studentName: 'Jane Smith',
+            messageCount: 20,
+            participationPercentage: 25,
+            lastActivity: '2024-01-15T09:00:00Z',
+          },
+        ],
+        conflictResolution: {
+          totalConflicts: 2,
+          resolvedConflicts: 1,
+          averageResolutionTime: 4.5,
+        },
+        insights: {
+          overallHealth: 'good',
+          recommendations: [
+            'Encourage more cross-member discussions',
+            'Review project timeline and identify bottlenecks',
+          ],
+          strengths: [
+            'Excellent team collaboration with strong cross-member interactions',
+            'Regular team communication',
+          ],
+          concerns: [
+            'Some delays in milestone completion',
+          ],
+        },
       },
     ],
   };

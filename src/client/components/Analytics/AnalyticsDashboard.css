@@ -550,6 +550,119 @@
   color: #e74c3c;
 }
 
+/* Conflict Resolution */
+.conflict-resolution {
+  margin-top: 15px;
+}
+
+.conflict-resolution h5 {
+  color: #2c3e50;
+  margin-bottom: 10px;
+  font-size: 0.9rem;
+}
+
+.conflict-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.stat.total-conflicts {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.stat.resolved-conflicts {
+  background: #d5f4e6;
+  color: #27ae60;
+}
+
+.stat.resolution-rate {
+  background: #e8f4fd;
+  color: #3498db;
+}
+
+.stat.avg-resolution-time {
+  background: #f8f9fa;
+  color: #6c757d;
+}
+
+/* Team Insights */
+.team-insights {
+  margin-top: 15px;
+  padding-top: 15px;
+  border-top: 1px solid #e9ecef;
+}
+
+.team-insights h5 {
+  color: #2c3e50;
+  margin-bottom: 10px;
+  font-size: 0.9rem;
+}
+
+.health-indicator {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 15px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-weight: 500;
+}
+
+.health-indicator.excellent {
+  background: #d5f4e6;
+  color: #27ae60;
+}
+
+.health-indicator.good {
+  background: #e8f4fd;
+  color: #3498db;
+}
+
+.health-indicator.needs_attention {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.health-indicator.critical {
+  background: #fadbd8;
+  color: #e74c3c;
+}
+
+.insights-section {
+  margin-bottom: 12px;
+}
+
+.insights-section h6 {
+  margin: 0 0 6px 0;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.insights-section ul {
+  margin: 0;
+  padding-left: 16px;
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
+.insights-section li {
+  margin-bottom: 4px;
+}
+
+.insights-section.strengths {
+  color: #27ae60;
+}
+
+.insights-section.concerns {
+  color: #e74c3c;
+}
+
+.insights-section.recommendations {
+  color: #3498db;
+}
+
 /* Interaction Patterns */
 .interaction-patterns h3 {
   color: #2c3e50;

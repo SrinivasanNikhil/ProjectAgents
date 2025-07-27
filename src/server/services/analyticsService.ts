@@ -81,6 +81,12 @@ export interface TeamPerformanceMetrics {
     resolvedConflicts: number;
     averageResolutionTime: number;
   };
+  insights: {
+    overallHealth: 'excellent' | 'good' | 'needs_attention' | 'critical';
+    recommendations: string[];
+    strengths: string[];
+    concerns: string[];
+  };
 }
 
 export interface InteractionPattern {
@@ -411,12 +417,22 @@ class AnalyticsService {
       })
     );
 
-    // Calculate conflict resolution metrics (simplified)
-    const conflictResolution = {
-      totalConflicts: 0, // Would need conflict detection logic
-      resolvedConflicts: 0,
-      averageResolutionTime: 0,
-    };
+    // Calculate conflict resolution metrics
+    const conflictResolution = await this.calculateConflictResolution(messages, conversationIds);
+
+    // Generate performance insights
+    const insights = this.generateTeamInsights({
+      collaborationScore,
+      communicationFrequency,
+      milestoneProgress: {
+        completed: completedMilestones,
+        total: milestones.length,
+        onTime: onTimeMilestones,
+        overdue: overdueMilestones,
+      },
+      participationBalance,
+      conflictResolution,
+    });
 
     return {
       projectId,
@@ -432,6 +448,7 @@ class AnalyticsService {
       },
       participationBalance,
       conflictResolution,
+      insights,
     };
   }
 
@@ -746,6 +763,253 @@ class AnalyticsService {
       frequency: Math.floor(Math.random() * 50) + 10,
       participants: [],
     }));
+  }
+
+  private async calculateConflictResolution(messages: any[], conversationIds: Types.ObjectId[]): Promise<{
+    totalConflicts: number;
+    resolvedConflicts: number;
+    averageResolutionTime: number;
+  }> {
+    // Conflict detection based on negative sentiment patterns and disagreement indicators
+    const conflictIndicators = [
+      /\b(disagree|wrong|no way|that's not right|i don't think so|bad idea)\b/i,
+      /\b(frustrated|annoyed|upset|concerned|worried)\b/i,
+      /\b(conflict|issue|problem|disagreement|dispute)\b/i,
+    ];
+
+    const resolutionIndicators = [
+      /\b(agree|resolved|compromise|solution|let's move forward|good point)\b/i,
+      /\b(understand|makes sense|i see|got it|thank you)\b/i,
+      /\b(apologize|sorry|my mistake|you're right)\b/i,
+    ];
+
+    const conflicts: Array<{
+      startTime: Date;
+      resolvedTime?: Date;
+      participants: string[];
+    }> = [];
+
+    let currentConflict: {
+      startTime: Date;
+      participants: string[];
+    } | null = null;
+
+    for (let i = 0; i < messages.length; i++) {
+      const message = messages[i];
+      const messageText = message.content?.toLowerCase() || '';
+      const senderId = message.sender.id.toString();
+
+      // Check for conflict indicators
+      const hasConflictIndicator = conflictIndicators.some(pattern => pattern.test(messageText));
+      
+      if (hasConflictIndicator) {
+        if (!currentConflict) {
+          currentConflict = {
+            startTime: message.createdAt,
+            participants: [senderId],
+          };
+        } else if (!currentConflict.participants.includes(senderId)) {
+          currentConflict.participants.push(senderId);
+        }
+      }
+
+      // Check for resolution indicators
+      if (currentConflict) {
+        const hasResolutionIndicator = resolutionIndicators.some(pattern => pattern.test(messageText));
+        
+        if (hasResolutionIndicator) {
+          // Look ahead to confirm resolution (check next few messages for continued positive tone)
+          let isResolved = true;
+          for (let j = i + 1; j < Math.min(i + 5, messages.length); j++) {
+            const nextMessage = messages[j];
+            const nextMessageText = nextMessage.content?.toLowerCase() || '';
+            if (conflictIndicators.some(pattern => pattern.test(nextMessageText))) {
+              isResolved = false;
+              break;
+            }
+          }
+
+          if (isResolved) {
+            conflicts.push({
+              startTime: currentConflict.startTime,
+              resolvedTime: message.createdAt,
+              participants: currentConflict.participants,
+            });
+            currentConflict = null;
+          }
+        }
+      }
+    }
+
+    // Add any unresolved conflicts
+    if (currentConflict) {
+      conflicts.push({
+        startTime: currentConflict.startTime,
+        participants: currentConflict.participants,
+      });
+    }
+
+    const totalConflicts = conflicts.length;
+    const resolvedConflicts = conflicts.filter(c => c.resolvedTime).length;
+    
+    // Calculate average resolution time in hours
+    const resolutionTimes = conflicts
+      .filter(c => c.resolvedTime)
+      .map(c => (c.resolvedTime!.getTime() - c.startTime.getTime()) / (1000 * 60 * 60));
+    
+    const averageResolutionTime = resolutionTimes.length > 0 
+      ? resolutionTimes.reduce((sum, time) => sum + time, 0) / resolutionTimes.length 
+      : 0;
+
+    return {
+      totalConflicts,
+      resolvedConflicts,
+      averageResolutionTime: Math.round(averageResolutionTime * 10) / 10, // Round to 1 decimal place
+    };
+  }
+
+  private generateTeamInsights(metrics: {
+    collaborationScore: number;
+    communicationFrequency: number;
+    milestoneProgress: { completed: number; total: number; onTime: number; overdue: number; };
+    participationBalance: Array<{ participationPercentage: number; lastActivity: Date; }>;
+    conflictResolution: { totalConflicts: number; resolvedConflicts: number; averageResolutionTime: number; };
+  }): {
+    overallHealth: 'excellent' | 'good' | 'needs_attention' | 'critical';
+    recommendations: string[];
+    strengths: string[];
+    concerns: string[];
+  } {
+    const recommendations: string[] = [];
+    const strengths: string[] = [];
+    const concerns: string[] = [];
+
+    // Analyze collaboration score
+    if (metrics.collaborationScore >= 80) {
+      strengths.push('Excellent team collaboration with strong cross-member interactions');
+    } else if (metrics.collaborationScore >= 60) {
+      strengths.push('Good collaboration patterns observed');
+    } else if (metrics.collaborationScore >= 40) {
+      concerns.push('Limited collaboration between team members');
+      recommendations.push('Encourage more cross-member discussions and pair programming');
+    } else {
+      concerns.push('Very low collaboration score - team members working in isolation');
+      recommendations.push('Implement structured collaboration activities and regular team check-ins');
+    }
+
+    // Analyze communication frequency
+    if (metrics.communicationFrequency >= 10) {
+      strengths.push('Active daily communication');
+    } else if (metrics.communicationFrequency >= 5) {
+      strengths.push('Regular team communication');
+    } else if (metrics.communicationFrequency >= 2) {
+      concerns.push('Infrequent team communication');
+      recommendations.push('Establish daily standup meetings or communication routines');
+    } else {
+      concerns.push('Very low communication frequency');
+      recommendations.push('Urgently implement regular team communication channels');
+    }
+
+    // Analyze milestone progress
+    const milestoneCompletionRate = metrics.milestoneProgress.total > 0 
+      ? (metrics.milestoneProgress.completed / metrics.milestoneProgress.total) * 100 
+      : 0;
+    const onTimeRate = metrics.milestoneProgress.completed > 0
+      ? (metrics.milestoneProgress.onTime / metrics.milestoneProgress.completed) * 100
+      : 100;
+
+    if (milestoneCompletionRate >= 90 && onTimeRate >= 80) {
+      strengths.push('Excellent milestone completion and time management');
+    } else if (milestoneCompletionRate >= 70 && onTimeRate >= 60) {
+      strengths.push('Good progress on project milestones');
+    } else if (milestoneCompletionRate >= 50) {
+      concerns.push('Some delays in milestone completion');
+      recommendations.push('Review project timeline and identify bottlenecks');
+    } else {
+      concerns.push('Significant delays in project progress');
+      recommendations.push('Immediate intervention needed - reassess project scope and deadlines');
+    }
+
+    if (metrics.milestoneProgress.overdue > 0) {
+      concerns.push(`${metrics.milestoneProgress.overdue} overdue milestone(s)`);
+      recommendations.push('Prioritize completion of overdue milestones');
+    }
+
+    // Analyze participation balance
+    const participationVariance = this.calculateParticipationVariance(metrics.participationBalance);
+    if (participationVariance < 10) {
+      strengths.push('Well-balanced team participation');
+    } else if (participationVariance < 25) {
+      strengths.push('Generally balanced participation');
+    } else if (participationVariance < 40) {
+      concerns.push('Unbalanced participation - some members less active');
+      recommendations.push('Encourage quiet members to participate more actively');
+    } else {
+      concerns.push('Highly unbalanced participation distribution');
+      recommendations.push('Address participation imbalances through role rotation and structured activities');
+    }
+
+    // Check for inactive members
+    const daysSinceActivity = metrics.participationBalance.map(p => 
+      (Date.now() - p.lastActivity.getTime()) / (1000 * 60 * 60 * 24)
+    );
+    const inactiveMembers = daysSinceActivity.filter(days => days > 3).length;
+    
+    if (inactiveMembers > 0) {
+      concerns.push(`${inactiveMembers} team member(s) inactive for >3 days`);
+      recommendations.push('Reach out to inactive team members to ensure engagement');
+    }
+
+    // Analyze conflict resolution
+    const resolutionRate = metrics.conflictResolution.totalConflicts > 0 
+      ? (metrics.conflictResolution.resolvedConflicts / metrics.conflictResolution.totalConflicts) * 100 
+      : 100;
+
+    if (metrics.conflictResolution.totalConflicts === 0) {
+      strengths.push('No detected conflicts - harmonious team environment');
+    } else if (resolutionRate >= 80 && metrics.conflictResolution.averageResolutionTime < 24) {
+      strengths.push('Excellent conflict resolution capabilities');
+    } else if (resolutionRate >= 60) {
+      strengths.push('Good conflict resolution practices');
+    } else if (resolutionRate >= 40) {
+      concerns.push('Some unresolved conflicts detected');
+      recommendations.push('Implement conflict resolution training and mediation processes');
+    } else {
+      concerns.push('Poor conflict resolution - multiple unresolved issues');
+      recommendations.push('Urgent need for conflict mediation and team building activities');
+    }
+
+    if (metrics.conflictResolution.averageResolutionTime > 48) {
+      concerns.push('Long conflict resolution times');
+      recommendations.push('Establish faster conflict resolution procedures');
+    }
+
+    // Determine overall health
+    let overallHealth: 'excellent' | 'good' | 'needs_attention' | 'critical';
+    
+    if (concerns.length === 0 && strengths.length >= 4) {
+      overallHealth = 'excellent';
+    } else if (concerns.length <= 1 && strengths.length >= 2) {
+      overallHealth = 'good';
+    } else if (concerns.length <= 3 || strengths.length >= 1) {
+      overallHealth = 'needs_attention';
+    } else {
+      overallHealth = 'critical';
+    }
+
+    return {
+      overallHealth,
+      recommendations: recommendations.slice(0, 5), // Limit to top 5 recommendations
+      strengths,
+      concerns,
+    };
+  }
+
+  private calculateParticipationVariance(participationBalance: Array<{ participationPercentage: number }>): number {
+    const percentages = participationBalance.map(p => p.participationPercentage);
+    const mean = percentages.reduce((sum, p) => sum + p, 0) / percentages.length;
+    const variance = percentages.reduce((sum, p) => sum + Math.pow(p - mean, 2), 0) / percentages.length;
+    return Math.sqrt(variance); // Return standard deviation
   }
 
   async exportConversationLogs(

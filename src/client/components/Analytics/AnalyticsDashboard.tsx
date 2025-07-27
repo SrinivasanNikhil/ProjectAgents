@@ -62,6 +62,24 @@ interface TeamPerformanceMetrics {
     onTime: number;
     overdue: number;
   };
+  participationBalance: Array<{
+    studentId: string;
+    studentName: string;
+    messageCount: number;
+    participationPercentage: number;
+    lastActivity: string;
+  }>;
+  conflictResolution: {
+    totalConflicts: number;
+    resolvedConflicts: number;
+    averageResolutionTime: number;
+  };
+  insights: {
+    overallHealth: 'excellent' | 'good' | 'needs_attention' | 'critical';
+    recommendations: string[];
+    strengths: string[];
+    concerns: string[];
+  };
 }
 
 interface InteractionPattern {
@@ -355,6 +373,71 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ userId, userRol
                     <span>⚠️ Overdue: {team.milestoneProgress.overdue}</span>
                   </div>
                 </div>
+              </div>
+
+              <div className="conflict-resolution">
+                <h5>Conflict Resolution</h5>
+                <div className="conflict-stats">
+                  <div className="stat total-conflicts">
+                    <span>🔥 Total Conflicts: {team.conflictResolution.totalConflicts}</span>
+                  </div>
+                  <div className="stat resolved-conflicts">
+                    <span>✅ Resolved: {team.conflictResolution.resolvedConflicts}</span>
+                  </div>
+                  <div className="stat resolution-rate">
+                    <span>📊 Resolution Rate: {
+                      team.conflictResolution.totalConflicts > 0 
+                        ? Math.round((team.conflictResolution.resolvedConflicts / team.conflictResolution.totalConflicts) * 100)
+                        : 100
+                    }%</span>
+                  </div>
+                  <div className="stat avg-resolution-time">
+                    <span>⏱️ Avg Resolution: {team.conflictResolution.averageResolutionTime}h</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="team-insights">
+                <h5>Team Health Insights</h5>
+                <div className={`health-indicator ${team.insights.overallHealth}`}>
+                  <span className="health-label">Overall Health:</span>
+                  <span className="health-value">
+                    {team.insights.overallHealth.replace('_', ' ').toUpperCase()}
+                  </span>
+                </div>
+
+                {team.insights.strengths.length > 0 && (
+                  <div className="insights-section strengths">
+                    <h6>✅ Strengths</h6>
+                    <ul>
+                      {team.insights.strengths.map((strength, index) => (
+                        <li key={index}>{strength}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {team.insights.concerns.length > 0 && (
+                  <div className="insights-section concerns">
+                    <h6>⚠️ Concerns</h6>
+                    <ul>
+                      {team.insights.concerns.map((concern, index) => (
+                        <li key={index}>{concern}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {team.insights.recommendations.length > 0 && (
+                  <div className="insights-section recommendations">
+                    <h6>💡 Recommendations</h6>
+                    <ul>
+                      {team.insights.recommendations.map((recommendation, index) => (
+                        <li key={index}>{recommendation}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </div>
             </div>
           </div>
