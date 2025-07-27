@@ -210,8 +210,8 @@
   - [x] 3.9 Create chat moderation and content filtering
 
 - [ ] 4.0 Instructor Dashboard and Analytics
-  - [ ] 4.1 Build instructor dashboard layout and navigation
-  - [ ] 4.2 Create conversation monitoring interface
+  - [x] 4.1 Build instructor dashboard layout and navigation
+  - [x] 4.2 Create conversation monitoring interface
   - [ ] 4.3 Implement analytics data collection and processing
   - [ ] 4.4 Build analytics visualization components
   - [ ] 4.5 Create team performance tracking system
