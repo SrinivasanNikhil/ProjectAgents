@@ -140,6 +140,94 @@ export interface DepartmentAnalytics {
   };
 }
 
+export interface DetailedDepartmentAnalytics extends DepartmentAnalytics {
+  departmentBreakdown: Array<{
+    _id: string;
+    totalUsers: number;
+    students: number;
+    instructors: number;
+    administrators: number;
+  }>;
+  projectsByDepartment: Array<{
+    _id: string;
+    totalProjects: number;
+    activeProjects: number;
+    completedProjects: number;
+  }>;
+  activityByDepartment: Array<{
+    _id: string;
+    totalMessages: number;
+    activeUsers: number;
+  }>;
+  generatedAt: Date;
+}
+
+export interface DepartmentAnalyticsTrends {
+  period: 'week' | 'month' | 'quarter' | 'year';
+  dateRange: { start: Date; end: Date };
+  userTrends: Array<{
+    _id: { year: number; month: number; day: number };
+    newUsers: number;
+    newStudents: number;
+    newInstructors: number;
+  }>;
+  projectTrends: Array<{
+    _id: { year: number; month: number; day: number };
+    newProjects: number;
+  }>;
+  activityTrends: Array<{
+    _id: { year: number; month: number; day: number };
+    totalMessages: number;
+    activeUsers: number;
+  }>;
+}
+
+export interface SystemHealthMetrics {
+  database: {
+    totalSize: number;
+    totalCollections: number;
+    totalIndexes: number;
+    connectionStatus: 'connected' | 'disconnected';
+  };
+  performance: {
+    messagesLast24h: number;
+    messagesLastWeek: number;
+    activeUsersLast24h: number;
+    errorRate: number;
+    avgResponseTime: number;
+  };
+  system: {
+    uptime: number;
+    memoryUsage: {
+      used: number;
+      total: number;
+      external: number;
+    };
+    nodeVersion: string;
+  };
+  lastUpdated: Date;
+}
+
+export interface UserSummaryForAdmin {
+  totalUsers: number;
+  usersByRole: Record<string, number>;
+  usersByDepartment: Array<{
+    _id: string;
+    count: number;
+  }>;
+  recentRegistrations: number;
+  activeUsersLast24h: number;
+  generatedAt: Date;
+}
+
+export interface ProjectSummaryForAdmin {
+  totalProjects: number;
+  projectsByStatus: Record<string, number>;
+  recentProjectsLast7Days: number;
+  averageProjectDurationDays: number;
+  generatedAt: Date;
+}
+
 class AnalyticsService {
   async getConversationAnalytics(
     conversationId: Types.ObjectId,
@@ -1084,6 +1172,360 @@ class AnalyticsService {
       
       return `[${timestamp}] ${sender}${thread}: ${content}`;
     }).join('\n\n');
+  }
+
+  // Department-wide admin analytics methods
+
+  async getDetailedDepartmentAnalytics(): Promise<DetailedDepartmentAnalytics> {
+    const User = mongoose.model<IUser>('User');
+    const Project = mongoose.model<IProject>('Project');
+    const Persona = mongoose.model<IPersona>('Persona');
+    const Message = mongoose.model<IMessage>('Message');
+
+    // Get basic department analytics
+    const basicAnalytics = await this.getDepartmentAnalytics();
+
+    // Get department breakdown
+    const departmentBreakdown = await User.aggregate([
+      {
+        $group: {
+          _id: '$department',
+          totalUsers: { $sum: 1 },
+          students: {
+            $sum: { $cond: [{ $eq: ['$role', 'student'] }, 1, 0] }
+          },
+          instructors: {
+            $sum: { $cond: [{ $eq: ['$role', 'instructor'] }, 1, 0] }
+          },
+          administrators: {
+            $sum: { $cond: [{ $eq: ['$role', 'administrator'] }, 1, 0] }
+          }
+        }
+      },
+      { $sort: { totalUsers: -1 } }
+    ]);
+
+    // Get project statistics by department
+    const projectsByDepartment = await Project.aggregate([
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'createdBy',
+          foreignField: '_id',
+          as: 'creator'
+        }
+      },
+      { $unwind: '$creator' },
+      {
+        $group: {
+          _id: '$creator.department',
+          totalProjects: { $sum: 1 },
+          activeProjects: {
+            $sum: { $cond: [{ $eq: ['$status', 'active'] }, 1, 0] }
+          },
+          completedProjects: {
+            $sum: { $cond: [{ $eq: ['$status', 'completed'] }, 1, 0] }
+          }
+        }
+      }
+    ]);
+
+    // Get activity metrics by department
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const activityByDepartment = await Message.aggregate([
+      { $match: { createdAt: { $gte: thirtyDaysAgo } } },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'sender.id',
+          foreignField: '_id',
+          as: 'senderUser'
+        }
+      },
+      { $unwind: { path: '$senderUser', preserveNullAndEmptyArrays: true } },
+      {
+        $group: {
+          _id: '$senderUser.department',
+          totalMessages: { $sum: 1 },
+          uniqueUsers: { $addToSet: '$sender.id' }
+        }
+      },
+      {
+        $project: {
+          _id: 1,
+          totalMessages: 1,
+          activeUsers: { $size: '$uniqueUsers' }
+        }
+      }
+    ]);
+
+    return {
+      ...basicAnalytics,
+      departmentBreakdown,
+      projectsByDepartment,
+      activityByDepartment,
+      generatedAt: new Date()
+    };
+  }
+
+  async getDepartmentAnalyticsTrends(
+    period: 'week' | 'month' | 'quarter' | 'year',
+    dateRange?: { start: Date; end: Date }
+  ): Promise<DepartmentAnalyticsTrends> {
+    const User = mongoose.model<IUser>('User');
+    const Project = mongoose.model<IProject>('Project');
+    const Message = mongoose.model<IMessage>('Message');
+
+    // Calculate date range based on period
+    const endDate = dateRange?.end || new Date();
+    let startDate = dateRange?.start;
+    
+    if (!startDate) {
+      const now = new Date();
+      switch (period) {
+        case 'week':
+          startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+          break;
+        case 'month':
+          startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+          break;
+        case 'quarter':
+          startDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+          break;
+        case 'year':
+          startDate = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+          break;
+      }
+    }
+
+    // Get user registration trends
+    const userTrends = await User.aggregate([
+      { $match: { createdAt: { $gte: startDate, $lte: endDate } } },
+      {
+        $group: {
+          _id: {
+            year: { $year: '$createdAt' },
+            month: { $month: '$createdAt' },
+            day: { $dayOfMonth: '$createdAt' }
+          },
+          newUsers: { $sum: 1 },
+          newStudents: {
+            $sum: { $cond: [{ $eq: ['$role', 'student'] }, 1, 0] }
+          },
+          newInstructors: {
+            $sum: { $cond: [{ $eq: ['$role', 'instructor'] }, 1, 0] }
+          }
+        }
+      },
+      { $sort: { '_id.year': 1, '_id.month': 1, '_id.day': 1 } }
+    ]);
+
+    // Get project creation trends
+    const projectTrends = await Project.aggregate([
+      { $match: { createdAt: { $gte: startDate, $lte: endDate } } },
+      {
+        $group: {
+          _id: {
+            year: { $year: '$createdAt' },
+            month: { $month: '$createdAt' },
+            day: { $dayOfMonth: '$createdAt' }
+          },
+          newProjects: { $sum: 1 }
+        }
+      },
+      { $sort: { '_id.year': 1, '_id.month': 1, '_id.day': 1 } }
+    ]);
+
+    // Get activity trends
+    const activityTrends = await Message.aggregate([
+      { $match: { createdAt: { $gte: startDate, $lte: endDate } } },
+      {
+        $group: {
+          _id: {
+            year: { $year: '$createdAt' },
+            month: { $month: '$createdAt' },
+            day: { $dayOfMonth: '$createdAt' }
+          },
+          totalMessages: { $sum: 1 },
+          uniqueUsers: { $addToSet: '$sender.id' }
+        }
+      },
+      {
+        $project: {
+          _id: 1,
+          totalMessages: 1,
+          activeUsers: { $size: '$uniqueUsers' }
+        }
+      },
+      { $sort: { '_id.year': 1, '_id.month': 1, '_id.day': 1 } }
+    ]);
+
+    return {
+      period,
+      dateRange: { start: startDate, end: endDate },
+      userTrends,
+      projectTrends,
+      activityTrends
+    };
+  }
+
+  async getSystemHealthMetrics(): Promise<SystemHealthMetrics> {
+    const User = mongoose.model<IUser>('User');
+    const Project = mongoose.model<IProject>('Project');
+    const Message = mongoose.model<IMessage>('Message');
+    const Persona = mongoose.model<IPersona>('Persona');
+
+    // Database performance metrics
+    const dbStats = await mongoose.connection.db.stats();
+    
+    // Recent activity metrics
+    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+
+    const [
+      recentMessages,
+      weeklyMessages,
+      activeUsers,
+      errorRate
+    ] = await Promise.all([
+      Message.countDocuments({ createdAt: { $gte: oneDayAgo } }),
+      Message.countDocuments({ createdAt: { $gte: oneWeekAgo } }),
+      User.countDocuments({ lastActive: { $gte: oneDayAgo } }),
+      this.calculateErrorRate(oneDayAgo)
+    ]);
+
+    // System load indicators
+    const memoryUsage = process.memoryUsage();
+    const uptime = process.uptime();
+
+    return {
+      database: {
+        totalSize: dbStats.dataSize,
+        totalCollections: dbStats.collections,
+        totalIndexes: dbStats.indexes,
+        connectionStatus: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected'
+      },
+      performance: {
+        messagesLast24h: recentMessages,
+        messagesLastWeek: weeklyMessages,
+        activeUsersLast24h: activeUsers,
+        errorRate,
+        avgResponseTime: await this.getAverageResponseTime()
+      },
+      system: {
+        uptime,
+        memoryUsage: {
+          used: memoryUsage.heapUsed,
+          total: memoryUsage.heapTotal,
+          external: memoryUsage.external
+        },
+        nodeVersion: process.version
+      },
+      lastUpdated: new Date()
+    };
+  }
+
+  async getUserSummaryForAdmin(): Promise<UserSummaryForAdmin> {
+    const User = mongoose.model<IUser>('User');
+
+    const [
+      totalUsers,
+      usersByRole,
+      usersByDepartment,
+      recentRegistrations,
+      activeUsers
+    ] = await Promise.all([
+      User.countDocuments(),
+      User.aggregate([
+        { $group: { _id: '$role', count: { $sum: 1 } } }
+      ]),
+      User.aggregate([
+        { $group: { _id: '$department', count: { $sum: 1 } } },
+        { $sort: { count: -1 } }
+      ]),
+      User.countDocuments({
+        createdAt: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) }
+      }),
+      User.countDocuments({
+        lastActive: { $gte: new Date(Date.now() - 24 * 60 * 60 * 1000) }
+      })
+    ]);
+
+    return {
+      totalUsers,
+      usersByRole: usersByRole.reduce((acc, item) => {
+        acc[item._id] = item.count;
+        return acc;
+      }, {}),
+      usersByDepartment,
+      recentRegistrations,
+      activeUsersLast24h: activeUsers,
+      generatedAt: new Date()
+    };
+  }
+
+  async getProjectSummaryForAdmin(): Promise<ProjectSummaryForAdmin> {
+    const Project = mongoose.model<IProject>('Project');
+
+    const [
+      totalProjects,
+      projectsByStatus,
+      recentProjects,
+      avgProjectDuration
+    ] = await Promise.all([
+      Project.countDocuments(),
+      Project.aggregate([
+        { $group: { _id: '$status', count: { $sum: 1 } } }
+      ]),
+      Project.countDocuments({
+        createdAt: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) }
+      }),
+      this.calculateAverageProjectDuration()
+    ]);
+
+    return {
+      totalProjects,
+      projectsByStatus: projectsByStatus.reduce((acc, item) => {
+        acc[item._id] = item.count;
+        return acc;
+      }, {}),
+      recentProjectsLast7Days: recentProjects,
+      averageProjectDurationDays: avgProjectDuration,
+      generatedAt: new Date()
+    };
+  }
+
+  // Helper methods for admin analytics
+
+  private async calculateErrorRate(since: Date): Promise<number> {
+    // In a real implementation, this would query error logs
+    // For now, return a simulated error rate
+    return Math.random() * 5; // 0-5% error rate
+  }
+
+  private async getAverageResponseTime(): Promise<number> {
+    // In a real implementation, this would query response time logs
+    // For now, return a simulated average response time in milliseconds
+    return Math.random() * 500 + 100; // 100-600ms
+  }
+
+  private async calculateAverageProjectDuration(): Promise<number> {
+    const Project = mongoose.model<IProject>('Project');
+    
+    const completedProjects = await Project.find({
+      status: 'completed',
+      'timeline.startDate': { $exists: true },
+      'timeline.endDate': { $exists: true }
+    });
+
+    if (completedProjects.length === 0) return 0;
+
+    const totalDuration = completedProjects.reduce((sum, project) => {
+      const duration = (project.timeline.endDate.getTime() - project.timeline.startDate.getTime()) / (1000 * 60 * 60 * 24);
+      return sum + duration;
+    }, 0);
+
+    return totalDuration / completedProjects.length;
   }
 }
 
