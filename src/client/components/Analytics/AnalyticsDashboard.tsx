@@ -99,6 +99,19 @@ interface InteractionPattern {
   };
 }
 
+interface Project {
+  _id: string;
+  name: string;
+  status: string;
+}
+
+interface ExportOptions {
+  projectId: string;
+  format: 'json' | 'csv' | 'txt';
+  startDate: string;
+  endDate: string;
+}
+
 interface AnalyticsDashboardProps {
   userId: string;
   userRole: string;
@@ -107,7 +120,7 @@ interface AnalyticsDashboardProps {
 const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ userId, userRole }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeView, setActiveView] = useState<'overview' | 'conversations' | 'personas' | 'teams' | 'patterns'>('overview');
+  const [activeView, setActiveView] = useState<'overview' | 'conversations' | 'personas' | 'teams' | 'patterns' | 'export'>('overview');
   
   // Data state
   const [summary, setSummary] = useState<AnalyticsSummary | null>(null);
@@ -115,6 +128,17 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ userId, userRol
   const [personaAnalytics, setPersonaAnalytics] = useState<PersonaAnalytics[]>([]);
   const [teamPerformance, setTeamPerformance] = useState<TeamPerformanceMetrics[]>([]);
   const [interactionPatterns, setInteractionPatterns] = useState<InteractionPattern | null>(null);
+  const [projects, setProjects] = useState<Project[]>([]);
+
+  // Export state
+  const [exportOptions, setExportOptions] = useState<ExportOptions>({
+    projectId: '',
+    format: 'json',
+    startDate: '',
+    endDate: '',
+  });
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
 
   useEffect(() => {
     loadAnalyticsData();
@@ -125,12 +149,13 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ userId, userRol
       setLoading(true);
       setError(null);
 
-      const [summaryRes, conversationsRes, personasRes, teamsRes, patternsRes] = await Promise.all([
+      const [summaryRes, conversationsRes, personasRes, teamsRes, patternsRes, projectsRes] = await Promise.all([
         axios.get(`/api/analytics/summary/${userId}`),
         axios.get(`/api/analytics/conversations/summary/${userId}`),
         axios.get(`/api/analytics/personas/summary/${userId}`),
         axios.get(`/api/analytics/teams/performance/${userId}`),
-        axios.get(`/api/analytics/interactions/patterns/${userId}`)
+        axios.get(`/api/analytics/interactions/patterns/${userId}`),
+        axios.get(`/api/projects/instructor/${userId}`)
       ]);
 
       setSummary(summaryRes.data);
@@ -138,6 +163,15 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ userId, userRol
       setPersonaAnalytics(personasRes.data.personas || []);
       setTeamPerformance(teamsRes.data.teams || []);
       setInteractionPatterns(patternsRes.data);
+      setProjects(projectsRes.data?.projects || []);
+
+      // Set default project if available
+      if (projectsRes.data?.projects?.length > 0 && !exportOptions.projectId) {
+        setExportOptions(prev => ({
+          ...prev,
+          projectId: projectsRes.data.projects[0]._id,
+        }));
+      }
 
     } catch (err: any) {
       console.error('Error loading analytics data:', err);
@@ -146,6 +180,193 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ userId, userRol
       setLoading(false);
     }
   };
+
+  const handleExportConversationLogs = async () => {
+    if (!exportOptions.projectId) {
+      setExportError('Please select a project');
+      return;
+    }
+
+    try {
+      setIsExporting(true);
+      setExportError(null);
+
+      // Build query parameters
+      const params = new URLSearchParams({
+        format: exportOptions.format,
+      });
+
+      if (exportOptions.startDate) {
+        params.append('startDate', new Date(exportOptions.startDate).toISOString());
+      }
+      if (exportOptions.endDate) {
+        params.append('endDate', new Date(exportOptions.endDate).toISOString());
+      }
+
+      // Make request to export endpoint
+      const response = await axios.get(
+        `/api/analytics/export/${exportOptions.projectId}?${params.toString()}`,
+        {
+          responseType: 'blob', // Important for file downloads
+          headers: {
+            'Accept': getContentType(exportOptions.format),
+          },
+        }
+      );
+
+      // Create blob and download file
+      const blob = new Blob([response.data], { 
+        type: getContentType(exportOptions.format) 
+      });
+      
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      
+      // Generate filename
+      const project = projects.find(p => p._id === exportOptions.projectId);
+      const projectName = project?.name || 'project';
+      const timestamp = new Date().toISOString().split('T')[0];
+      const filename = `conversation-logs-${projectName}-${timestamp}.${exportOptions.format}`;
+      
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      
+      // Cleanup
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(link);
+
+    } catch (err: any) {
+      console.error('Export error:', err);
+      setExportError(
+        err.response?.data?.message || 
+        'Failed to export conversation logs. Please try again.'
+      );
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const getContentType = (format: string): string => {
+    switch (format) {
+      case 'csv':
+        return 'text/csv';
+      case 'txt':
+        return 'text/plain';
+      default:
+        return 'application/json';
+    }
+  };
+
+  const renderExportSection = () => (
+    <div className="export-section">
+      <h3>Export Conversation Logs</h3>
+      <div className="export-controls">
+        <div className="export-form">
+          <div className="form-group">
+            <label htmlFor="project-select">Project:</label>
+            <select
+              id="project-select"
+              value={exportOptions.projectId}
+              onChange={(e) => setExportOptions(prev => ({ ...prev, projectId: e.target.value }))}
+              className="form-control"
+            >
+              <option value="">Select a project</option>
+              {projects.map(project => (
+                <option key={project._id} value={project._id}>
+                  {project.name} ({project.status})
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="format-select">Format:</label>
+            <select
+              id="format-select"
+              value={exportOptions.format}
+              onChange={(e) => setExportOptions(prev => ({ ...prev, format: e.target.value as 'json' | 'csv' | 'txt' }))}
+              className="form-control"
+            >
+              <option value="json">JSON</option>
+              <option value="csv">CSV</option>
+              <option value="txt">Text</option>
+            </select>
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="start-date">Start Date (optional):</label>
+            <input
+              type="date"
+              id="start-date"
+              value={exportOptions.startDate}
+              onChange={(e) => setExportOptions(prev => ({ ...prev, startDate: e.target.value }))}
+              className="form-control"
+            />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="end-date">End Date (optional):</label>
+            <input
+              type="date"
+              id="end-date"
+              value={exportOptions.endDate}
+              onChange={(e) => setExportOptions(prev => ({ ...prev, endDate: e.target.value }))}
+              className="form-control"
+              min={exportOptions.startDate}
+            />
+          </div>
+
+          <div className="export-actions">
+            <button
+              onClick={handleExportConversationLogs}
+              disabled={isExporting || !exportOptions.projectId}
+              className="export-button primary"
+            >
+              {isExporting ? (
+                <>
+                  <span className="spinner"></span>
+                  Exporting...
+                </>
+              ) : (
+                <>
+                  📥 Export Conversation Logs
+                </>
+              )}
+            </button>
+          </div>
+
+          {exportError && (
+            <div className="export-error">
+              <span className="error-icon">⚠️</span>
+              {exportError}
+            </div>
+          )}
+        </div>
+
+        <div className="export-info">
+          <h4>Export Information</h4>
+          <div className="info-section">
+            <h5>Available Formats:</h5>
+            <ul>
+              <li><strong>JSON:</strong> Structured data with all message metadata</li>
+              <li><strong>CSV:</strong> Spreadsheet-compatible format with key fields</li>
+              <li><strong>TXT:</strong> Human-readable conversation logs</li>
+            </ul>
+          </div>
+          <div className="info-section">
+            <h5>Date Range:</h5>
+            <p>Leave date fields empty to export all conversation data for the selected project. Use specific dates to filter the export to a particular time period.</p>
+          </div>
+          <div className="info-section">
+            <h5>Privacy Notice:</h5>
+            <p>Exported data includes all conversation messages, participant information, and metadata. Please handle exported files according to your institution's data privacy policies.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 
   const renderOverview = () => (
     <div className="analytics-overview">
@@ -582,6 +803,12 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ userId, userRol
           >
             Patterns
           </button>
+          <button 
+            className={`tab ${activeView === 'export' ? 'active' : ''}`}
+            onClick={() => setActiveView('export')}
+          >
+            Export
+          </button>
         </div>
         <button onClick={loadAnalyticsData} className="refresh-button">
           🔄 Refresh
@@ -594,6 +821,7 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ userId, userRol
         {activeView === 'personas' && renderPersonaAnalytics()}
         {activeView === 'teams' && renderTeamPerformance()}
         {activeView === 'patterns' && renderInteractionPatterns()}
+        {activeView === 'export' && renderExportSection()}
       </div>
     </div>
   );
