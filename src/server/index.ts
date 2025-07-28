@@ -23,6 +23,7 @@ import monitoringRoutes from './routes/monitoring';
 import personaRoutes from './routes/personas';
 import chatRoutes from './routes/chat';
 import moderationRoutes from './routes/moderation';
+import adminRoutes from './routes/admin';
 
 // Import middleware
 import { authenticateToken, optionalAuth } from './middleware/auth';
@@ -143,6 +144,7 @@ app.use('/api/monitoring', monitoringRoutes);
 app.use('/api/personas', personaRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/moderation', moderationRoutes);
+app.use('/api/admin', adminRoutes);
 
 // Protected routes example
 app.get('/api/protected', authenticateToken, (req, res) => {
