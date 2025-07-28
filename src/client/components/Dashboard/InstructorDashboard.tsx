@@ -4,6 +4,7 @@ import { PersonaManagementDashboard } from '../Personas/PersonaManagementDashboa
 import ModerationDashboard from '../Chat/ModerationDashboard';
 import ConversationMonitor from './ConversationMonitor';
 import AnalyticsDashboard from '../Analytics/AnalyticsDashboard';
+import InstructorInterventionTools from './InstructorInterventionTools';
 import './InstructorDashboard.css';
 
 interface Project {
@@ -61,7 +62,7 @@ interface InstructorDashboardProps {
   userRole: string;
 }
 
-type DashboardView = 'overview' | 'projects' | 'personas' | 'analytics' | 'monitoring' | 'settings';
+type DashboardView = 'overview' | 'projects' | 'personas' | 'analytics' | 'monitoring' | 'interventions' | 'settings';
 
 const InstructorDashboard: React.FC<InstructorDashboardProps> = ({ userId, userRole }) => {
   const [currentView, setCurrentView] = useState<DashboardView>('overview');
@@ -147,6 +148,15 @@ const InstructorDashboard: React.FC<InstructorDashboardProps> = ({ userId, userR
           >
             <span className="nav-icon">🔍</span>
             Monitoring
+          </button>
+        </li>
+        <li>
+          <button
+            className={`nav-item ${currentView === 'interventions' ? 'active' : ''}`}
+            onClick={() => setCurrentView('interventions')}
+          >
+            <span className="nav-icon">🛠️</span>
+            Interventions
           </button>
         </li>
         <li>
@@ -344,6 +354,12 @@ const InstructorDashboard: React.FC<InstructorDashboardProps> = ({ userId, userR
     </div>
   );
 
+  const renderInterventions = () => (
+    <div className="dashboard-content interventions">
+      <InstructorInterventionTools userId={userId} userRole={userRole} />
+    </div>
+  );
+
   const renderSettings = () => (
     <div className="dashboard-content settings">
       <h2>Dashboard Settings</h2>
@@ -394,6 +410,8 @@ const InstructorDashboard: React.FC<InstructorDashboardProps> = ({ userId, userR
         return renderAnalytics();
       case 'monitoring':
         return renderMonitoring();
+      case 'interventions':
+        return renderInterventions();
       case 'settings':
         return renderSettings();
       default:

@@ -27,6 +27,14 @@ vi.mock('../Chat/ModerationDashboard', () => ({
   ),
 }));
 
+vi.mock('./InstructorInterventionTools', () => ({
+  default: ({ userId, userRole }: { userId: string; userRole: string }) => (
+    <div data-testid="instructor-intervention-tools">
+      Instructor Intervention Tools for user: {userId} with role: {userRole}
+    </div>
+  ),
+}));
+
 describe('InstructorDashboard', () => {
   const mockProps = {
     userId: 'instructor-123',
@@ -206,6 +214,7 @@ describe('InstructorDashboard', () => {
       expect(screen.getAllByText('Personas')).toHaveLength(2); // Navigation and stat card
       expect(screen.getByText('Analytics')).toBeInTheDocument();
       expect(screen.getByText('Monitoring')).toBeInTheDocument();
+      expect(screen.getByText('Interventions')).toBeInTheDocument();
       expect(screen.getByText('Settings')).toBeInTheDocument();
     });
 
@@ -239,6 +248,12 @@ describe('InstructorDashboard', () => {
       
       expect(screen.getByText('Conversation Monitoring')).toBeInTheDocument();
       expect(screen.getByTestId('moderation-dashboard')).toBeInTheDocument();
+    });
+
+    it('should switch to interventions view when interventions is clicked', () => {
+      fireEvent.click(screen.getByRole('button', { name: /🛠️ Interventions/ }));
+      
+      expect(screen.getByTestId('instructor-intervention-tools')).toBeInTheDocument();
     });
 
     it('should switch to settings view when settings is clicked', () => {
