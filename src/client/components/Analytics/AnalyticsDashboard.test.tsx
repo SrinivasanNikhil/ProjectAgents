@@ -433,5 +433,360 @@ describe('AnalyticsDashboard', () => {
     expect(mockedAxios.get).toHaveBeenCalledWith(`/api/analytics/personas/summary/${mockProps.userId}`);
     expect(mockedAxios.get).toHaveBeenCalledWith(`/api/analytics/teams/performance/${mockProps.userId}`);
     expect(mockedAxios.get).toHaveBeenCalledWith(`/api/analytics/interactions/patterns/${mockProps.userId}`);
+    expect(mockedAxios.get).toHaveBeenCalledWith(`/api/projects/instructor/${mockProps.userId}`);
+  });
+
+  describe('Export Functionality', () => {
+    const mockProjectsData = {
+      projects: [
+        { _id: 'project1', name: 'AI Project', status: 'active' },
+        { _id: 'project2', name: 'Web Development', status: 'completed' },
+      ],
+    };
+
+    beforeEach(() => {
+      mockedAxios.get.mockImplementation((url: string) => {
+        if (url.includes('/projects/instructor/')) {
+          return Promise.resolve({ data: mockProjectsData });
+        }
+        if (url.includes('/summary/')) {
+          return Promise.resolve({ data: mockSummaryData });
+        }
+        if (url.includes('/conversations/summary/')) {
+          return Promise.resolve({ data: { conversations: mockConversationData.conversations } });
+        }
+        if (url.includes('/personas/summary/')) {
+          return Promise.resolve({ data: { personas: mockPersonaData.personas } });
+        }
+        if (url.includes('/teams/performance/')) {
+          return Promise.resolve({ data: { teams: mockTeamData.teams } });
+        }
+        if (url.includes('/interactions/patterns/')) {
+          return Promise.resolve({ data: mockPatternData });
+        }
+        return Promise.resolve({ data: {} });
+      });
+    });
+
+    it('renders export tab and section', async () => {
+      render(<AnalyticsDashboard {...mockProps} />);
+      
+      await waitFor(() => {
+        expect(screen.getByText('Analytics Dashboard')).toBeInTheDocument();
+      });
+
+      // Check export tab exists
+      const exportTab = screen.getByRole('button', { name: 'Export' });
+      expect(exportTab).toBeInTheDocument();
+
+      // Click export tab
+      fireEvent.click(exportTab);
+
+      // Check export section renders
+      expect(screen.getByText('Export Conversation Logs')).toBeInTheDocument();
+      expect(screen.getByText('Available Formats:')).toBeInTheDocument();
+      expect(screen.getByText('Date Range:')).toBeInTheDocument();
+      expect(screen.getByText('Privacy Notice:')).toBeInTheDocument();
+    });
+
+    it('populates project dropdown with fetched projects', async () => {
+      render(<AnalyticsDashboard {...mockProps} />);
+      
+      await waitFor(() => {
+        expect(screen.getByText('Analytics Dashboard')).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByRole('button', { name: 'Export' }));
+
+      const projectSelect = screen.getByLabelText('Project:') as HTMLSelectElement;
+      expect(projectSelect).toBeInTheDocument();
+
+      // Check that projects are populated
+      await waitFor(() => {
+        expect(projectSelect.options).toHaveLength(3); // 1 default + 2 projects
+        expect(projectSelect.options[1].textContent).toBe('AI Project (active)');
+        expect(projectSelect.options[2].textContent).toBe('Web Development (completed)');
+      });
+    });
+
+    it('updates export options when form fields change', async () => {
+      render(<AnalyticsDashboard {...mockProps} />);
+      
+      await waitFor(() => {
+        expect(screen.getByText('Analytics Dashboard')).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByRole('button', { name: 'Export' }));
+
+      // Change project
+      const projectSelect = screen.getByLabelText('Project:');
+      fireEvent.change(projectSelect, { target: { value: 'project1' } });
+
+      // Change format
+      const formatSelect = screen.getByLabelText('Format:');
+      fireEvent.change(formatSelect, { target: { value: 'csv' } });
+
+      // Change start date
+      const startDateInput = screen.getByLabelText('Start Date (optional):');
+      fireEvent.change(startDateInput, { target: { value: '2024-01-01' } });
+
+      // Change end date
+      const endDateInput = screen.getByLabelText('End Date (optional):');
+      fireEvent.change(endDateInput, { target: { value: '2024-01-31' } });
+
+      // Verify changes
+      expect((projectSelect as HTMLSelectElement).value).toBe('project1');
+      expect((formatSelect as HTMLSelectElement).value).toBe('csv');
+      expect((startDateInput as HTMLInputElement).value).toBe('2024-01-01');
+      expect((endDateInput as HTMLInputElement).value).toBe('2024-01-31');
+    });
+
+    it('enables export button when project is selected', async () => {
+      render(<AnalyticsDashboard {...mockProps} />);
+      
+      await waitFor(() => {
+        expect(screen.getByText('Analytics Dashboard')).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByRole('button', { name: 'Export' }));
+
+      const exportButton = screen.getByRole('button', { name: /Export Conversation Logs/ });
+      
+      // Initially disabled when no project selected
+      expect(exportButton).toBeDisabled();
+
+      // Select a project
+      const projectSelect = screen.getByLabelText('Project:');
+      fireEvent.change(projectSelect, { target: { value: 'project1' } });
+
+      // Should now be enabled
+      expect(exportButton).not.toBeDisabled();
+    });
+
+    it('makes export API call with correct parameters', async () => {
+      // Mock successful export
+      const mockBlob = new Blob(['test data'], { type: 'application/json' });
+      mockedAxios.get.mockImplementation((url: string, config?: any) => {
+        if (url.includes('/analytics/export/')) {
+          return Promise.resolve({ data: mockBlob });
+        }
+        // Default mocks for other endpoints
+        if (url.includes('/projects/instructor/')) {
+          return Promise.resolve({ data: mockProjectsData });
+        }
+        return Promise.resolve({ data: mockSummaryData });
+      });
+
+      // Mock URL.createObjectURL and related DOM methods
+      const mockCreateObjectURL = vi.fn().mockReturnValue('blob:mock-url');
+      const mockRevokeObjectURL = vi.fn();
+      global.URL.createObjectURL = mockCreateObjectURL;
+      global.URL.revokeObjectURL = mockRevokeObjectURL;
+
+      // Mock document.createElement and DOM manipulation
+      const mockLink = {
+        href: '',
+        download: '',
+        click: vi.fn(),
+      };
+      const mockAppendChild = vi.fn();
+      const mockRemoveChild = vi.fn();
+      
+      vi.spyOn(document, 'createElement').mockReturnValue(mockLink as any);
+      vi.spyOn(document.body, 'appendChild').mockImplementation(mockAppendChild);
+      vi.spyOn(document.body, 'removeChild').mockImplementation(mockRemoveChild);
+
+      render(<AnalyticsDashboard {...mockProps} />);
+      
+      await waitFor(() => {
+        expect(screen.getByText('Analytics Dashboard')).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByRole('button', { name: 'Export' }));
+
+      // Fill form
+      const projectSelect = screen.getByLabelText('Project:');
+      fireEvent.change(projectSelect, { target: { value: 'project1' } });
+
+      const formatSelect = screen.getByLabelText('Format:');
+      fireEvent.change(formatSelect, { target: { value: 'csv' } });
+
+      const startDateInput = screen.getByLabelText('Start Date (optional):');
+      fireEvent.change(startDateInput, { target: { value: '2024-01-01' } });
+
+      const endDateInput = screen.getByLabelText('End Date (optional):');
+      fireEvent.change(endDateInput, { target: { value: '2024-01-31' } });
+
+      // Click export
+      const exportButton = screen.getByRole('button', { name: /Export Conversation Logs/ });
+      fireEvent.click(exportButton);
+
+      // Wait for API call
+      await waitFor(() => {
+        expect(mockedAxios.get).toHaveBeenCalledWith(
+          expect.stringContaining('/api/analytics/export/project1'),
+          expect.objectContaining({
+            responseType: 'blob',
+            headers: expect.objectContaining({
+              'Accept': 'text/csv',
+            }),
+          })
+        );
+      });
+
+      // Verify URL construction
+      const lastCall = mockedAxios.get.mock.calls.find(call => 
+        call[0].includes('/analytics/export/project1')
+      );
+      expect(lastCall[0]).toContain('format=csv');
+      expect(lastCall[0]).toContain('startDate=2024-01-01T');
+      expect(lastCall[0]).toContain('endDate=2024-01-31T');
+    });
+
+    it('handles export errors gracefully', async () => {
+      mockedAxios.get.mockImplementation((url: string) => {
+        if (url.includes('/analytics/export/')) {
+          return Promise.reject({
+            response: { data: { message: 'Export failed: Invalid date range' } },
+          });
+        }
+        if (url.includes('/projects/instructor/')) {
+          return Promise.resolve({ data: mockProjectsData });
+        }
+        return Promise.resolve({ data: mockSummaryData });
+      });
+
+      render(<AnalyticsDashboard {...mockProps} />);
+      
+      await waitFor(() => {
+        expect(screen.getByText('Analytics Dashboard')).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByRole('button', { name: 'Export' }));
+
+      // Select project and try to export
+      const projectSelect = screen.getByLabelText('Project:');
+      fireEvent.change(projectSelect, { target: { value: 'project1' } });
+
+      const exportButton = screen.getByRole('button', { name: /Export Conversation Logs/ });
+      fireEvent.click(exportButton);
+
+      // Wait for error to appear
+      await waitFor(() => {
+        expect(screen.getByText('Export failed: Invalid date range')).toBeInTheDocument();
+      });
+
+      // Error icon should be visible
+      expect(screen.getByText('⚠️')).toBeInTheDocument();
+    });
+
+    it('shows loading state during export', async () => {
+      let resolveExport: (value: any) => void;
+      const exportPromise = new Promise(resolve => {
+        resolveExport = resolve;
+      });
+
+      mockedAxios.get.mockImplementation((url: string) => {
+        if (url.includes('/analytics/export/')) {
+          return exportPromise;
+        }
+        if (url.includes('/projects/instructor/')) {
+          return Promise.resolve({ data: mockProjectsData });
+        }
+        return Promise.resolve({ data: mockSummaryData });
+      });
+
+      render(<AnalyticsDashboard {...mockProps} />);
+      
+      await waitFor(() => {
+        expect(screen.getByText('Analytics Dashboard')).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByRole('button', { name: 'Export' }));
+
+      // Select project and try to export
+      const projectSelect = screen.getByLabelText('Project:');
+      fireEvent.change(projectSelect, { target: { value: 'project1' } });
+
+      const exportButton = screen.getByRole('button', { name: /Export Conversation Logs/ });
+      fireEvent.click(exportButton);
+
+      // Should show loading state
+      await waitFor(() => {
+        expect(screen.getByText('Exporting...')).toBeInTheDocument();
+        expect(exportButton).toBeDisabled();
+      });
+
+      // Resolve the promise
+      resolveExport!({ data: new Blob(['test'], { type: 'application/json' }) });
+
+      // Loading state should disappear
+      await waitFor(() => {
+        expect(screen.queryByText('Exporting...')).not.toBeInTheDocument();
+        expect(exportButton).not.toBeDisabled();
+      });
+    });
+
+    it('validates required project selection', async () => {
+      render(<AnalyticsDashboard {...mockProps} />);
+      
+      await waitFor(() => {
+        expect(screen.getByText('Analytics Dashboard')).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByRole('button', { name: 'Export' }));
+
+      // Try to export without selecting project
+      const exportButton = screen.getByRole('button', { name: /Export Conversation Logs/ });
+      fireEvent.click(exportButton);
+
+      // Should show error
+      await waitFor(() => {
+        expect(screen.getByText('Please select a project')).toBeInTheDocument();
+      });
+    });
+
+    it('sets correct content types for different formats', async () => {
+      const formats = [
+        { format: 'json', contentType: 'application/json' },
+        { format: 'csv', contentType: 'text/csv' },
+        { format: 'txt', contentType: 'text/plain' },
+      ];
+
+      for (const { format, contentType } of formats) {
+        mockedAxios.get.mockClear();
+        mockedAxios.get.mockImplementation((url: string) => {
+          if (url.includes('/projects/instructor/')) {
+            return Promise.resolve({ data: mockProjectsData });
+          }
+          return Promise.resolve({ data: mockSummaryData });
+        });
+
+        render(<AnalyticsDashboard {...mockProps} />);
+        
+        await waitFor(() => {
+          expect(screen.getByText('Analytics Dashboard')).toBeInTheDocument();
+        });
+
+        fireEvent.click(screen.getByRole('button', { name: 'Export' }));
+
+        const formatSelect = screen.getByLabelText('Format:');
+        fireEvent.change(formatSelect, { target: { value: format } });
+
+        const projectSelect = screen.getByLabelText('Project:');
+        fireEvent.change(projectSelect, { target: { value: 'project1' } });
+
+        const exportButton = screen.getByRole('button', { name: /Export Conversation Logs/ });
+        fireEvent.click(exportButton);
+
+        await waitFor(() => {
+          const exportCall = mockedAxios.get.mock.calls.find(call => 
+            call[0].includes('/analytics/export/')
+          );
+          expect(exportCall).toBeDefined();
+          expect(exportCall[1].headers.Accept).toBe(contentType);
+        });
+      }
+    });
   });
 });
