@@ -228,7 +228,7 @@
   - [x] 4.9 Build department-wide analytics for administrators
 
 - [ ] 5.0 Assessment and Milestone Management
-  - [ ] 5.1 Create milestone data models and relationships
+  - [x] 5.1 Create milestone data models and relationships
   - [ ] 5.2 Build milestone creation and management interface
   - [ ] 5.3 Implement milestone checkpoint system
   - [ ] 5.4 Create persona sign-off functionality
