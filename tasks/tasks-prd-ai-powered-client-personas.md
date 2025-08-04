@@ -37,8 +37,8 @@
 - `src/server/models/PersonaMood.test.ts` - Unit tests for PersonaMood model
 - `src/server/models/Conversation.ts` - Conversation and message models
 - `src/server/models/Conversation.test.ts` - Unit tests for Conversation model
-- `src/server/models/Milestone.ts` - Milestone and assessment models
-- `src/server/models/Milestone.test.ts` - Unit tests for Milestone model
+- `src/server/models/Milestone.ts` - Comprehensive milestone data model with persona sign-offs, submissions, evaluation rubrics, and relationships to Project, User, Persona, and Artifact models
+- `src/server/models/Milestone.test.ts` - Comprehensive unit tests for Milestone model covering schema validation, relationships, instance methods, virtual fields, and database operations
 - `src/server/models/Meeting.ts` - Meeting model for scheduled milestone meetings with participants, agenda, and meeting management
 - `src/server/models/Meeting.test.ts` - Unit tests for Meeting model
 - `src/server/models/Artifact.ts` - File upload and artifact models
@@ -227,8 +227,8 @@
   - [x] 4.8 Create instructor intervention tools
   - [x] 4.9 Build department-wide analytics for administrators
 
-- [ ] 5.0 Assessment and Milestone Management
-  - [ ] 5.1 Create milestone data models and relationships
+- [🚧] 5.0 Assessment and Milestone Management
+  - [x] 5.1 Create milestone data models and relationships
   - [ ] 5.2 Build milestone creation and management interface
   - [ ] 5.3 Implement milestone checkpoint system
   - [ ] 5.4 Create persona sign-off functionality
