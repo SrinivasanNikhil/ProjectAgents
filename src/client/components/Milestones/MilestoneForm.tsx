@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { 
-  CalendarIcon, 
-  PlusIcon, 
+import {
+  CalendarIcon,
+  PlusIcon,
   XMarkIcon,
   ExclamationTriangleIcon,
   InformationCircleIcon,
   TrashIcon,
-  ClockIcon
+  ClockIcon,
 } from '@heroicons/react/24/outline';
 
 interface Project {
@@ -104,7 +104,9 @@ const MilestoneForm: React.FC<MilestoneFormProps> = ({
   const [project, setProject] = useState<Project | null>(null);
   const [personas, setPersonas] = useState<Persona[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [activeTab, setActiveTab] = useState<'basic' | 'requirements' | 'evaluation' | 'settings'>('basic');
+  const [activeTab, setActiveTab] = useState<
+    'basic' | 'requirements' | 'evaluation' | 'settings'
+  >('basic');
 
   // Load project and personas
   useEffect(() => {
@@ -112,10 +114,14 @@ const MilestoneForm: React.FC<MilestoneFormProps> = ({
       try {
         const [projectResponse, personasResponse] = await Promise.all([
           fetch(`/api/projects/${projectId}`, {
-            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` },
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem('token')}`,
+            },
           }),
           fetch(`/api/personas?project=${projectId}`, {
-            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` },
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem('token')}`,
+            },
           }),
         ]);
 
@@ -142,15 +148,21 @@ const MilestoneForm: React.FC<MilestoneFormProps> = ({
       setFormData({
         name: milestone.name || '',
         description: milestone.description || '',
-        dueDate: milestone.dueDate ? new Date(milestone.dueDate).toISOString().split('T')[0] : '',
+        dueDate: milestone.dueDate
+          ? new Date(milestone.dueDate).toISOString().split('T')[0]
+          : '',
         type: milestone.type || 'deliverable',
         requirements: milestone.requirements || [],
-        personaSignOffs: milestone.personaSignOffs?.map((signOff: any) => signOff.persona._id || signOff.persona) || [],
+        personaSignOffs:
+          milestone.personaSignOffs?.map(
+            (signOff: any) => signOff.persona._id || signOff.persona
+          ) || [],
         evaluation: {
           rubric: milestone.evaluation?.rubric || [],
         },
         settings: {
-          requireAllPersonaApprovals: milestone.settings?.requireAllPersonaApprovals ?? true,
+          requireAllPersonaApprovals:
+            milestone.settings?.requireAllPersonaApprovals ?? true,
           allowResubmission: milestone.settings?.allowResubmission ?? true,
           maxResubmissions: milestone.settings?.maxResubmissions ?? 3,
           autoCloseAfterDays: milestone.settings?.autoCloseAfterDays ?? 7,
@@ -176,7 +188,7 @@ const MilestoneForm: React.FC<MilestoneFormProps> = ({
       const dueDate = new Date(formData.dueDate);
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      
+
       if (dueDate < today) {
         newErrors.dueDate = 'Due date cannot be in the past';
       }
@@ -185,10 +197,12 @@ const MilestoneForm: React.FC<MilestoneFormProps> = ({
     // Validate requirements
     formData.requirements.forEach((req, index) => {
       if (!req.title.trim()) {
-        newErrors[`requirement_${index}_title`] = 'Requirement title is required';
+        newErrors[`requirement_${index}_title`] =
+          'Requirement title is required';
       }
       if (!req.description.trim()) {
-        newErrors[`requirement_${index}_description`] = 'Requirement description is required';
+        newErrors[`requirement_${index}_description`] =
+          'Requirement description is required';
       }
     });
 
@@ -198,30 +212,42 @@ const MilestoneForm: React.FC<MilestoneFormProps> = ({
         newErrors[`rubric_${index}_criterion`] = 'Criterion name is required';
       }
       if (!criterion.description.trim()) {
-        newErrors[`rubric_${index}_description`] = 'Criterion description is required';
+        newErrors[`rubric_${index}_description`] =
+          'Criterion description is required';
       }
       if (criterion.weight <= 0 || criterion.weight > 100) {
-        newErrors[`rubric_${index}_weight`] = 'Weight must be between 1 and 100';
+        newErrors[`rubric_${index}_weight`] =
+          'Weight must be between 1 and 100';
       }
       if (criterion.maxScore <= 0) {
-        newErrors[`rubric_${index}_maxScore`] = 'Max score must be greater than 0';
+        newErrors[`rubric_${index}_maxScore`] =
+          'Max score must be greater than 0';
       }
     });
 
     // Validate total rubric weight
     if (formData.evaluation.rubric.length > 0) {
-      const totalWeight = formData.evaluation.rubric.reduce((sum, criterion) => sum + criterion.weight, 0);
+      const totalWeight = formData.evaluation.rubric.reduce(
+        (sum, criterion) => sum + criterion.weight,
+        0
+      );
       if (Math.abs(totalWeight - 100) > 0.01) {
         newErrors.rubricWeight = 'Rubric criteria weights must sum to 100%';
       }
     }
 
     // Validate settings
-    if (formData.settings.maxResubmissions < 0 || formData.settings.maxResubmissions > 10) {
+    if (
+      formData.settings.maxResubmissions < 0 ||
+      formData.settings.maxResubmissions > 10
+    ) {
       newErrors.maxResubmissions = 'Max resubmissions must be between 0 and 10';
     }
 
-    if (formData.settings.autoCloseAfterDays < 1 || formData.settings.autoCloseAfterDays > 90) {
+    if (
+      formData.settings.autoCloseAfterDays < 1 ||
+      formData.settings.autoCloseAfterDays > 90
+    ) {
       newErrors.autoCloseAfterDays = 'Auto close days must be between 1 and 90';
     }
 
@@ -231,14 +257,18 @@ const MilestoneForm: React.FC<MilestoneFormProps> = ({
 
   const handleInputChange = (field: keyof MilestoneFormData, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
-    
+
     // Clear error when user starts typing
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: '' }));
     }
   };
 
-  const handleNestedChange = (parent: keyof MilestoneFormData, field: string, value: any) => {
+  const handleNestedChange = (
+    parent: keyof MilestoneFormData,
+    field: string,
+    value: any
+  ) => {
     setFormData(prev => ({
       ...prev,
       [parent]: {
@@ -246,14 +276,27 @@ const MilestoneForm: React.FC<MilestoneFormProps> = ({
         [field]: value,
       },
     }));
+
+    // Clear error when user starts typing
+    const errorKey = field;
+    if (errors[errorKey]) {
+      setErrors(prev => ({ ...prev, [errorKey]: '' }));
+    }
   };
 
-  const handleArrayChange = (field: keyof MilestoneFormData, index: number, subField: string, value: any) => {
+  const handleArrayChange = (
+    field: keyof MilestoneFormData,
+    index: number,
+    subField: string,
+    value: any
+  ) => {
     setFormData(prev => ({
       ...prev,
-      [field]: (prev[field] as any[]).map((item, i) => 
-        i === index ? { ...item, [subField]: value } : item
-      ),
+      [field]: Array.isArray(prev[field])
+        ? (prev[field] as any[]).map((item, i) =>
+            i === index ? { ...item, [subField]: value } : item
+          )
+        : prev[field],
     }));
   };
 
@@ -302,7 +345,7 @@ const MilestoneForm: React.FC<MilestoneFormProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateForm()) {
       return;
     }
@@ -312,7 +355,7 @@ const MilestoneForm: React.FC<MilestoneFormProps> = ({
         ...formData,
         project: projectId,
       };
-      
+
       await onSubmit(submitData);
     } catch (error) {
       console.error('Error submitting milestone:', error);
@@ -320,7 +363,10 @@ const MilestoneForm: React.FC<MilestoneFormProps> = ({
   };
 
   const getCurrentWeightSum = () => {
-    return formData.evaluation.rubric.reduce((sum, criterion) => sum + (criterion.weight || 0), 0);
+    return formData.evaluation.rubric.reduce(
+      (sum, criterion) => sum + (criterion.weight || 0),
+      0
+    );
   };
 
   const tabs = [
@@ -340,12 +386,15 @@ const MilestoneForm: React.FC<MilestoneFormProps> = ({
               {milestone ? 'Edit Milestone' : 'Create New Milestone'}
             </h2>
             {project && (
-              <p className="text-sm text-gray-600 mt-1">Project: {project.name}</p>
+              <p className="text-sm text-gray-600 mt-1">
+                Project: {project.name}
+              </p>
             )}
           </div>
           <button
             onClick={onCancel}
             className="text-gray-400 hover:text-gray-500 focus:outline-none"
+            aria-label="Close"
           >
             <XMarkIcon className="w-6 h-6" />
           </button>
@@ -355,7 +404,7 @@ const MilestoneForm: React.FC<MilestoneFormProps> = ({
       {/* Tabs */}
       <div className="border-b border-gray-200">
         <nav className="flex space-x-8 px-6" aria-label="Tabs">
-          {tabs.map((tab) => {
+          {tabs.map(tab => {
             const Icon = tab.icon;
             return (
               <button
@@ -380,13 +429,17 @@ const MilestoneForm: React.FC<MilestoneFormProps> = ({
         {activeTab === 'basic' && (
           <div className="space-y-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label
+                htmlFor="milestone-name"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
                 Milestone Name *
               </label>
               <input
+                id="milestone-name"
                 type="text"
                 value={formData.name}
-                onChange={(e) => handleInputChange('name', e.target.value)}
+                onChange={e => handleInputChange('name', e.target.value)}
                 className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                   errors.name ? 'border-red-300' : 'border-gray-300'
                 }`}
@@ -398,12 +451,16 @@ const MilestoneForm: React.FC<MilestoneFormProps> = ({
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label
+                htmlFor="milestone-description"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
                 Description *
               </label>
               <textarea
+                id="milestone-description"
                 value={formData.description}
-                onChange={(e) => handleInputChange('description', e.target.value)}
+                onChange={e => handleInputChange('description', e.target.value)}
                 rows={4}
                 className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                   errors.description ? 'border-red-300' : 'border-gray-300'
@@ -411,19 +468,25 @@ const MilestoneForm: React.FC<MilestoneFormProps> = ({
                 placeholder="Describe the milestone objectives and expectations"
               />
               {errors.description && (
-                <p className="mt-1 text-sm text-red-600">{errors.description}</p>
+                <p className="mt-1 text-sm text-red-600">
+                  {errors.description}
+                </p>
               )}
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label
+                  htmlFor="milestone-due-date"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
                   Due Date *
                 </label>
                 <input
+                  id="milestone-due-date"
                   type="date"
                   value={formData.dueDate}
-                  onChange={(e) => handleInputChange('dueDate', e.target.value)}
+                  onChange={e => handleInputChange('dueDate', e.target.value)}
                   className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                     errors.dueDate ? 'border-red-300' : 'border-gray-300'
                   }`}
@@ -434,12 +497,18 @@ const MilestoneForm: React.FC<MilestoneFormProps> = ({
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label
+                  htmlFor="milestone-type"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
                   Type *
                 </label>
                 <select
+                  id="milestone-type"
                   value={formData.type}
-                  onChange={(e) => handleInputChange('type', e.target.value as any)}
+                  onChange={e =>
+                    handleInputChange('type', e.target.value as any)
+                  }
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="deliverable">Deliverable</option>
@@ -456,16 +525,19 @@ const MilestoneForm: React.FC<MilestoneFormProps> = ({
                 Required Persona Sign-offs
               </label>
               <p className="text-sm text-gray-600 mb-3">
-                Select which personas must approve this milestone before it can be marked as complete.
+                Select which personas must approve this milestone before it can
+                be marked as complete.
               </p>
-              
+
               {personas.length === 0 ? (
                 <div className="p-4 bg-gray-50 rounded-md">
-                  <p className="text-sm text-gray-600">No personas available for this project.</p>
+                  <p className="text-sm text-gray-600">
+                    No personas available for this project.
+                  </p>
                 </div>
               ) : (
                 <div className="space-y-2 max-h-40 overflow-y-auto border border-gray-200 rounded-md p-3">
-                  {personas.map((persona) => (
+                  {personas.map(persona => (
                     <label key={persona._id} className="flex items-center">
                       <input
                         type="checkbox"
@@ -490,8 +562,12 @@ const MilestoneForm: React.FC<MilestoneFormProps> = ({
           <div className="space-y-6">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-lg font-medium text-gray-900">Milestone Requirements</h3>
-                <p className="text-sm text-gray-600">Define what students need to submit for this milestone.</p>
+                <h3 className="text-lg font-medium text-gray-900">
+                  Milestone Requirements
+                </h3>
+                <p className="text-sm text-gray-600">
+                  Define what students need to submit for this milestone.
+                </p>
               </div>
               <button
                 type="button"
@@ -518,7 +594,10 @@ const MilestoneForm: React.FC<MilestoneFormProps> = ({
             ) : (
               <div className="space-y-4">
                 {formData.requirements.map((requirement, index) => (
-                  <div key={index} className="border border-gray-200 rounded-md p-4">
+                  <div
+                    key={index}
+                    className="border border-gray-200 rounded-md p-4"
+                  >
                     <div className="flex items-center justify-between mb-4">
                       <h4 className="text-sm font-medium text-gray-900">
                         Requirement {index + 1}
@@ -527,6 +606,7 @@ const MilestoneForm: React.FC<MilestoneFormProps> = ({
                         type="button"
                         onClick={() => removeRequirement(index)}
                         className="text-red-400 hover:text-red-500 focus:outline-none"
+                        aria-label="Remove requirement"
                       >
                         <TrashIcon className="w-4 h-4" />
                       </button>
@@ -540,14 +620,25 @@ const MilestoneForm: React.FC<MilestoneFormProps> = ({
                         <input
                           type="text"
                           value={requirement.title}
-                          onChange={(e) => handleArrayChange('requirements', index, 'title', e.target.value)}
+                          onChange={e =>
+                            handleArrayChange(
+                              'requirements',
+                              index,
+                              'title',
+                              e.target.value
+                            )
+                          }
                           className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                            errors[`requirement_${index}_title`] ? 'border-red-300' : 'border-gray-300'
+                            errors[`requirement_${index}_title`]
+                              ? 'border-red-300'
+                              : 'border-gray-300'
                           }`}
                           placeholder="Requirement title"
                         />
                         {errors[`requirement_${index}_title`] && (
-                          <p className="mt-1 text-sm text-red-600">{errors[`requirement_${index}_title`]}</p>
+                          <p className="mt-1 text-sm text-red-600">
+                            {errors[`requirement_${index}_title`]}
+                          </p>
                         )}
                       </div>
 
@@ -557,7 +648,14 @@ const MilestoneForm: React.FC<MilestoneFormProps> = ({
                         </label>
                         <select
                           value={requirement.type}
-                          onChange={(e) => handleArrayChange('requirements', index, 'type', e.target.value)}
+                          onChange={e =>
+                            handleArrayChange(
+                              'requirements',
+                              index,
+                              'type',
+                              e.target.value
+                            )
+                          }
                           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                         >
                           <option value="file">File Upload</option>
@@ -574,15 +672,26 @@ const MilestoneForm: React.FC<MilestoneFormProps> = ({
                       </label>
                       <textarea
                         value={requirement.description}
-                        onChange={(e) => handleArrayChange('requirements', index, 'description', e.target.value)}
+                        onChange={e =>
+                          handleArrayChange(
+                            'requirements',
+                            index,
+                            'description',
+                            e.target.value
+                          )
+                        }
                         rows={2}
                         className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                          errors[`requirement_${index}_description`] ? 'border-red-300' : 'border-gray-300'
+                          errors[`requirement_${index}_description`]
+                            ? 'border-red-300'
+                            : 'border-gray-300'
                         }`}
                         placeholder="Describe what students need to provide"
                       />
                       {errors[`requirement_${index}_description`] && (
-                        <p className="mt-1 text-sm text-red-600">{errors[`requirement_${index}_description`]}</p>
+                        <p className="mt-1 text-sm text-red-600">
+                          {errors[`requirement_${index}_description`]}
+                        </p>
                       )}
                     </div>
 
@@ -591,10 +700,19 @@ const MilestoneForm: React.FC<MilestoneFormProps> = ({
                         <input
                           type="checkbox"
                           checked={requirement.isRequired}
-                          onChange={(e) => handleArrayChange('requirements', index, 'isRequired', e.target.checked)}
+                          onChange={e =>
+                            handleArrayChange(
+                              'requirements',
+                              index,
+                              'isRequired',
+                              e.target.checked
+                            )
+                          }
                           className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                         />
-                        <span className="ml-2 text-sm text-gray-700">Required (students must complete this)</span>
+                        <span className="ml-2 text-sm text-gray-700">
+                          Required (students must complete this)
+                        </span>
                       </label>
                     </div>
                   </div>
@@ -609,8 +727,12 @@ const MilestoneForm: React.FC<MilestoneFormProps> = ({
           <div className="space-y-6">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-lg font-medium text-gray-900">Evaluation Rubric</h3>
-                <p className="text-sm text-gray-600">Define criteria and scoring for this milestone.</p>
+                <h3 className="text-lg font-medium text-gray-900">
+                  Evaluation Rubric
+                </h3>
+                <p className="text-sm text-gray-600">
+                  Define criteria and scoring for this milestone.
+                </p>
               </div>
               <button
                 type="button"
@@ -628,9 +750,15 @@ const MilestoneForm: React.FC<MilestoneFormProps> = ({
                   <InformationCircleIcon className="w-5 h-5 text-blue-400" />
                   <div className="ml-3">
                     <p className="text-sm text-blue-700">
-                      Current weight total: <span className="font-medium">{getCurrentWeightSum()}%</span>
+                      Current weight total:{' '}
+                      <span className="font-medium">
+                        {getCurrentWeightSum()}%
+                      </span>
                       {getCurrentWeightSum() !== 100 && (
-                        <span className="text-blue-600"> (should equal 100%)</span>
+                        <span className="text-blue-600">
+                          {' '}
+                          (should equal 100%)
+                        </span>
                       )}
                     </p>
                   </div>
@@ -643,7 +771,9 @@ const MilestoneForm: React.FC<MilestoneFormProps> = ({
                 <div className="flex">
                   <ExclamationTriangleIcon className="w-5 h-5 text-red-400" />
                   <div className="ml-3">
-                    <p className="text-sm text-red-700">{errors.rubricWeight}</p>
+                    <p className="text-sm text-red-700">
+                      {errors.rubricWeight}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -651,7 +781,9 @@ const MilestoneForm: React.FC<MilestoneFormProps> = ({
 
             {formData.evaluation.rubric.length === 0 ? (
               <div className="text-center py-8 bg-gray-50 rounded-md">
-                <p className="text-gray-600">No evaluation criteria added yet.</p>
+                <p className="text-gray-600">
+                  No evaluation criteria added yet.
+                </p>
                 <button
                   type="button"
                   onClick={addRubricCriterion}
@@ -664,7 +796,10 @@ const MilestoneForm: React.FC<MilestoneFormProps> = ({
             ) : (
               <div className="space-y-4">
                 {formData.evaluation.rubric.map((criterion, index) => (
-                  <div key={index} className="border border-gray-200 rounded-md p-4">
+                  <div
+                    key={index}
+                    className="border border-gray-200 rounded-md p-4"
+                  >
                     <div className="flex items-center justify-between mb-4">
                       <h4 className="text-sm font-medium text-gray-900">
                         Criterion {index + 1}
@@ -673,6 +808,7 @@ const MilestoneForm: React.FC<MilestoneFormProps> = ({
                         type="button"
                         onClick={() => removeRubricCriterion(index)}
                         className="text-red-400 hover:text-red-500 focus:outline-none"
+                        aria-label="Remove criterion"
                       >
                         <TrashIcon className="w-4 h-4" />
                       </button>
@@ -686,14 +822,25 @@ const MilestoneForm: React.FC<MilestoneFormProps> = ({
                         <input
                           type="text"
                           value={criterion.criterion}
-                          onChange={(e) => handleArrayChange('evaluation', index, 'criterion', e.target.value)}
+                          onChange={e =>
+                            handleArrayChange(
+                              'evaluation',
+                              index,
+                              'criterion',
+                              e.target.value
+                            )
+                          }
                           className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                            errors[`rubric_${index}_criterion`] ? 'border-red-300' : 'border-gray-300'
+                            errors[`rubric_${index}_criterion`]
+                              ? 'border-red-300'
+                              : 'border-gray-300'
                           }`}
                           placeholder="e.g., Code Quality"
                         />
                         {errors[`rubric_${index}_criterion`] && (
-                          <p className="mt-1 text-sm text-red-600">{errors[`rubric_${index}_criterion`]}</p>
+                          <p className="mt-1 text-sm text-red-600">
+                            {errors[`rubric_${index}_criterion`]}
+                          </p>
                         )}
                       </div>
 
@@ -706,13 +853,24 @@ const MilestoneForm: React.FC<MilestoneFormProps> = ({
                           min="0"
                           max="100"
                           value={criterion.weight}
-                          onChange={(e) => handleArrayChange('evaluation', index, 'weight', parseInt(e.target.value) || 0)}
+                          onChange={e =>
+                            handleArrayChange(
+                              'evaluation',
+                              index,
+                              'weight',
+                              parseInt(e.target.value) || 0
+                            )
+                          }
                           className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                            errors[`rubric_${index}_weight`] ? 'border-red-300' : 'border-gray-300'
+                            errors[`rubric_${index}_weight`]
+                              ? 'border-red-300'
+                              : 'border-gray-300'
                           }`}
                         />
                         {errors[`rubric_${index}_weight`] && (
-                          <p className="mt-1 text-sm text-red-600">{errors[`rubric_${index}_weight`]}</p>
+                          <p className="mt-1 text-sm text-red-600">
+                            {errors[`rubric_${index}_weight`]}
+                          </p>
                         )}
                       </div>
 
@@ -724,13 +882,24 @@ const MilestoneForm: React.FC<MilestoneFormProps> = ({
                           type="number"
                           min="1"
                           value={criterion.maxScore}
-                          onChange={(e) => handleArrayChange('evaluation', index, 'maxScore', parseInt(e.target.value) || 1)}
+                          onChange={e =>
+                            handleArrayChange(
+                              'evaluation',
+                              index,
+                              'maxScore',
+                              parseInt(e.target.value) || 1
+                            )
+                          }
                           className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                            errors[`rubric_${index}_maxScore`] ? 'border-red-300' : 'border-gray-300'
+                            errors[`rubric_${index}_maxScore`]
+                              ? 'border-red-300'
+                              : 'border-gray-300'
                           }`}
                         />
                         {errors[`rubric_${index}_maxScore`] && (
-                          <p className="mt-1 text-sm text-red-600">{errors[`rubric_${index}_maxScore`]}</p>
+                          <p className="mt-1 text-sm text-red-600">
+                            {errors[`rubric_${index}_maxScore`]}
+                          </p>
                         )}
                       </div>
                     </div>
@@ -741,15 +910,26 @@ const MilestoneForm: React.FC<MilestoneFormProps> = ({
                       </label>
                       <textarea
                         value={criterion.description}
-                        onChange={(e) => handleArrayChange('evaluation', index, 'description', e.target.value)}
+                        onChange={e =>
+                          handleArrayChange(
+                            'evaluation',
+                            index,
+                            'description',
+                            e.target.value
+                          )
+                        }
                         rows={2}
                         className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                          errors[`rubric_${index}_description`] ? 'border-red-300' : 'border-gray-300'
+                          errors[`rubric_${index}_description`]
+                            ? 'border-red-300'
+                            : 'border-gray-300'
                         }`}
                         placeholder="Describe what this criterion evaluates"
                       />
                       {errors[`rubric_${index}_description`] && (
-                        <p className="mt-1 text-sm text-red-600">{errors[`rubric_${index}_description`]}</p>
+                        <p className="mt-1 text-sm text-red-600">
+                          {errors[`rubric_${index}_description`]}
+                        </p>
                       )}
                     </div>
                   </div>
@@ -763,27 +943,45 @@ const MilestoneForm: React.FC<MilestoneFormProps> = ({
         {activeTab === 'settings' && (
           <div className="space-y-6">
             <div>
-              <h3 className="text-lg font-medium text-gray-900">Milestone Settings</h3>
-              <p className="text-sm text-gray-600">Configure how this milestone behaves.</p>
+              <h3 className="text-lg font-medium text-gray-900">
+                Milestone Settings
+              </h3>
+              <p className="text-sm text-gray-600">
+                Configure how this milestone behaves.
+              </p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label
+                  htmlFor="max-resubmissions"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
                   Maximum Resubmissions
                 </label>
                 <input
+                  id="max-resubmissions"
                   type="number"
                   min="0"
                   max="10"
                   value={formData.settings.maxResubmissions}
-                  onChange={(e) => handleNestedChange('settings', 'maxResubmissions', parseInt(e.target.value) || 0)}
+                  onChange={e =>
+                    handleNestedChange(
+                      'settings',
+                      'maxResubmissions',
+                      parseInt(e.target.value) || 0
+                    )
+                  }
                   className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                    errors.maxResubmissions ? 'border-red-300' : 'border-gray-300'
+                    errors.maxResubmissions
+                      ? 'border-red-300'
+                      : 'border-gray-300'
                   }`}
                 />
                 {errors.maxResubmissions && (
-                  <p className="mt-1 text-sm text-red-600">{errors.maxResubmissions}</p>
+                  <p className="mt-1 text-sm text-red-600">
+                    {errors.maxResubmissions}
+                  </p>
                 )}
                 <p className="mt-1 text-sm text-gray-500">
                   Number of times students can resubmit after feedback
@@ -791,21 +989,35 @@ const MilestoneForm: React.FC<MilestoneFormProps> = ({
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label
+                  htmlFor="auto-close-days"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
                   Auto-close After (days)
                 </label>
                 <input
+                  id="auto-close-days"
                   type="number"
                   min="1"
                   max="90"
                   value={formData.settings.autoCloseAfterDays}
-                  onChange={(e) => handleNestedChange('settings', 'autoCloseAfterDays', parseInt(e.target.value) || 7)}
+                  onChange={e =>
+                    handleNestedChange(
+                      'settings',
+                      'autoCloseAfterDays',
+                      parseInt(e.target.value) || 7
+                    )
+                  }
                   className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                    errors.autoCloseAfterDays ? 'border-red-300' : 'border-gray-300'
+                    errors.autoCloseAfterDays
+                      ? 'border-red-300'
+                      : 'border-gray-300'
                   }`}
                 />
                 {errors.autoCloseAfterDays && (
-                  <p className="mt-1 text-sm text-red-600">{errors.autoCloseAfterDays}</p>
+                  <p className="mt-1 text-sm text-red-600">
+                    {errors.autoCloseAfterDays}
+                  </p>
                 )}
                 <p className="mt-1 text-sm text-gray-500">
                   Days after due date to automatically close milestone
@@ -819,7 +1031,13 @@ const MilestoneForm: React.FC<MilestoneFormProps> = ({
                   <input
                     type="checkbox"
                     checked={formData.settings.requireAllPersonaApprovals}
-                    onChange={(e) => handleNestedChange('settings', 'requireAllPersonaApprovals', e.target.checked)}
+                    onChange={e =>
+                      handleNestedChange(
+                        'settings',
+                        'requireAllPersonaApprovals',
+                        e.target.checked
+                      )
+                    }
                     className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                   />
                   <span className="ml-3 text-sm text-gray-700">
@@ -827,7 +1045,8 @@ const MilestoneForm: React.FC<MilestoneFormProps> = ({
                   </span>
                 </label>
                 <p className="ml-7 text-sm text-gray-500">
-                  When checked, all selected personas must approve before milestone is marked complete
+                  When checked, all selected personas must approve before
+                  milestone is marked complete
                 </p>
               </div>
 
@@ -836,7 +1055,13 @@ const MilestoneForm: React.FC<MilestoneFormProps> = ({
                   <input
                     type="checkbox"
                     checked={formData.settings.allowResubmission}
-                    onChange={(e) => handleNestedChange('settings', 'allowResubmission', e.target.checked)}
+                    onChange={e =>
+                      handleNestedChange(
+                        'settings',
+                        'allowResubmission',
+                        e.target.checked
+                      )
+                    }
                     className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                   />
                   <span className="ml-3 text-sm text-gray-700">
@@ -844,7 +1069,8 @@ const MilestoneForm: React.FC<MilestoneFormProps> = ({
                   </span>
                 </label>
                 <p className="ml-7 text-sm text-gray-500">
-                  When checked, students can resubmit their work after receiving feedback
+                  When checked, students can resubmit their work after receiving
+                  feedback
                 </p>
               </div>
             </div>
@@ -871,9 +1097,7 @@ const MilestoneForm: React.FC<MilestoneFormProps> = ({
                 {milestone ? 'Updating...' : 'Creating...'}
               </>
             ) : (
-              <>
-                {milestone ? 'Update Milestone' : 'Create Milestone'}
-              </>
+              <>{milestone ? 'Update Milestone' : 'Create Milestone'}</>
             )}
           </button>
         </div>

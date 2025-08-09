@@ -543,6 +543,7 @@ const MilestoneList: React.FC<MilestoneListProps> = ({
                             selectedMilestone === milestone._id ? null : milestone._id
                           )}
                           className="text-gray-400 hover:text-gray-500 focus:outline-none"
+                          aria-label="Actions"
                         >
                           <EllipsisVerticalIcon className="w-5 h-5" />
                         </button>

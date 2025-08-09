@@ -1,6 +1,11 @@
 import mongoose from 'mongoose';
 import { MongoMemoryServer } from 'mongodb-memory-server';
-import { milestoneService, CreateMilestoneData, PersonaSignOffData, SubmissionData } from './milestoneService';
+import {
+  milestoneService,
+  CreateMilestoneData,
+  PersonaSignOffData,
+  SubmissionData,
+} from './milestoneService';
 import { Milestone } from '../models/Milestone';
 import { Project } from '../models/Project';
 import { User } from '../models/User';
@@ -76,19 +81,33 @@ describe('MilestoneService', () => {
       name: 'Test Client',
       role: 'Product Manager',
       project: testProject._id,
-      background: 'An experienced product manager with expertise in agile development.',
+      background:
+        'An experienced product manager with expertise in agile development methodologies and team leadership.',
       personality: {
-        traits: ['analytical', 'detail-oriented', 'collaborative'],
-        communicationStyle: 'direct',
-        decisionMakingStyle: 'consensus',
-        priorities: ['quality', 'timeline'],
-        goals: ['successful project delivery with high quality'],
+        traits: [
+          'analytical',
+          'detail-oriented',
+          'collaborative',
+          'organized',
+          'communicative',
+        ],
+        communicationStyle: 'collaborative',
+        decisionMakingStyle: 'consensus-driven',
+        priorities: [
+          'quality assurance',
+          'timeline adherence',
+          'team collaboration',
+        ],
+        goals: [
+          'successful project delivery with high quality standards and team satisfaction',
+        ],
       },
       aiConfiguration: {
         model: 'gpt-4',
         temperature: 0.7,
         maxTokens: 1000,
-        systemPrompt: 'You are an experienced product manager.',
+        systemPrompt:
+          'You are an experienced product manager with over 10 years of experience in software development projects. You are analytical, detail-oriented, and focused on delivering high-quality results while maintaining realistic timelines. You communicate directly and clearly, and make decisions based on data and stakeholder input.',
         contextWindow: 50,
       },
     });
@@ -127,13 +146,18 @@ describe('MilestoneService', () => {
         personaSignOffs: [testPersona._id],
       };
 
-      const milestone = await milestoneService.createMilestone(milestoneData, testInstructor._id);
+      const milestone = await milestoneService.createMilestone(
+        milestoneData,
+        testInstructor._id
+      );
 
       expect(milestone).toBeDefined();
       expect(milestone.name).toBe('Project Kickoff');
       expect(milestone.project.toString()).toBe(testProject._id.toString());
       expect(milestone.personaSignOffs).toHaveLength(1);
-      expect(milestone.personaSignOffs[0].persona.toString()).toBe(testPersona._id.toString());
+      expect(milestone.personaSignOffs[0].persona.toString()).toBe(
+        testPersona._id.toString()
+      );
       expect(milestone.requirements).toHaveLength(1);
     });
 
@@ -163,7 +187,9 @@ describe('MilestoneService', () => {
 
       await expect(
         milestoneService.createMilestone(milestoneData, testInstructor._id)
-      ).rejects.toThrow('One or more personas not found or do not belong to the project');
+      ).rejects.toThrow(
+        'One or more personas not found or do not belong to the project'
+      );
     });
 
     it('should update project milestone count', async () => {
@@ -208,7 +234,9 @@ describe('MilestoneService', () => {
     });
 
     it('should return null for non-existent milestone', async () => {
-      const result = await milestoneService.getMilestoneById(new mongoose.Types.ObjectId());
+      const result = await milestoneService.getMilestoneById(
+        new mongoose.Types.ObjectId()
+      );
       expect(result).toBeNull();
     });
   });
@@ -245,7 +273,10 @@ describe('MilestoneService', () => {
     });
 
     it('should return paginated milestones', async () => {
-      const result = await milestoneService.getMilestones({}, { page: 1, limit: 2 });
+      const result = await milestoneService.getMilestones(
+        {},
+        { page: 1, limit: 2 }
+      );
 
       expect(result.milestones).toHaveLength(2);
       expect(result.total).toBe(3);
@@ -294,9 +325,12 @@ describe('MilestoneService', () => {
     });
 
     it('should sort milestones', async () => {
-      const result = await milestoneService.getMilestones({}, {
-        sort: { name: 1 },
-      });
+      const result = await milestoneService.getMilestones(
+        {},
+        {
+          sort: { name: 1 },
+        }
+      );
 
       expect(result.milestones[0].name).toBe('Milestone 1');
       expect(result.milestones[1].name).toBe('Milestone 2');
@@ -367,7 +401,10 @@ describe('MilestoneService', () => {
     });
 
     it('should delete milestone successfully', async () => {
-      await milestoneService.deleteMilestone(testMilestone._id, testInstructor._id);
+      await milestoneService.deleteMilestone(
+        testMilestone._id,
+        testInstructor._id
+      );
 
       const deletedMilestone = await Milestone.findById(testMilestone._id);
       expect(deletedMilestone).toBeNull();
@@ -378,7 +415,10 @@ describe('MilestoneService', () => {
 
     it('should throw error for non-existent milestone', async () => {
       await expect(
-        milestoneService.deleteMilestone(new mongoose.Types.ObjectId(), testInstructor._id)
+        milestoneService.deleteMilestone(
+          new mongoose.Types.ObjectId(),
+          testInstructor._id
+        )
       ).rejects.toThrow('Milestone not found');
     });
   });
@@ -492,11 +532,16 @@ describe('MilestoneService', () => {
         description: 'My submission for this milestone',
       };
 
-      const result = await milestoneService.addSubmission(testMilestone._id, submissionData);
+      const result = await milestoneService.addSubmission(
+        testMilestone._id,
+        submissionData
+      );
 
       expect(result).toBeDefined();
       expect(result?.submissions).toHaveLength(1);
-      expect(result?.submissions[0].description).toBe('My submission for this milestone');
+      expect(result?.submissions[0].description).toBe(
+        'My submission for this milestone'
+      );
       expect(result?.status).toBe('in-progress');
     });
 
@@ -521,7 +566,9 @@ describe('MilestoneService', () => {
 
       await expect(
         milestoneService.addSubmission(testMilestone._id, submissionData)
-      ).rejects.toThrow('One or more artifacts not found or do not belong to the project');
+      ).rejects.toThrow(
+        'One or more artifacts not found or do not belong to the project'
+      );
     });
   });
 
@@ -572,7 +619,9 @@ describe('MilestoneService', () => {
     });
 
     it('should return correct summary statistics', async () => {
-      const summary = await milestoneService.getProjectMilestonesSummary(testProject._id);
+      const summary = await milestoneService.getProjectMilestonesSummary(
+        testProject._id
+      );
 
       expect(summary.total).toBe(5);
       expect(summary.pending).toBe(3);
@@ -627,7 +676,9 @@ describe('MilestoneService', () => {
     });
 
     it('should return analytics data', async () => {
-      const analytics = await milestoneService.getMilestoneAnalytics(testProject._id);
+      const analytics = await milestoneService.getMilestoneAnalytics(
+        testProject._id
+      );
 
       expect(analytics.completionRate).toBe(50); // 1 out of 2 completed
       expect(analytics.personaEngagement).toHaveLength(1);
@@ -638,7 +689,9 @@ describe('MilestoneService', () => {
         review: 1,
       });
       expect(analytics.submissionStats.totalSubmissions).toBe(1);
-      expect(analytics.submissionStats.averageSubmissionsPerMilestone).toBe(0.5);
+      expect(analytics.submissionStats.averageSubmissionsPerMilestone).toBe(
+        0.5
+      );
     });
   });
 
@@ -647,9 +700,7 @@ describe('MilestoneService', () => {
       // Temporarily close the connection to simulate an error
       await mongoose.disconnect();
 
-      await expect(
-        milestoneService.getMilestones()
-      ).rejects.toThrow();
+      await expect(milestoneService.getMilestones()).rejects.toThrow();
 
       // Reconnect for other tests
       await mongoose.connect(mongoServer.getUri());
