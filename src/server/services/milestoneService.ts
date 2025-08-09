@@ -63,6 +63,19 @@ export interface SubmissionData {
   description: string;
 }
 
+export interface CreateCheckpointData {
+  title: string;
+  description: string;
+  dueDate: Date;
+  requirements?: Array<{
+    title: string;
+    description: string;
+    isRequired: boolean;
+    type: 'file' | 'text' | 'link' | 'presentation';
+  }>;
+  personaSignOffs?: Types.ObjectId[];
+}
+
 class MilestoneService {
   /**
    * Create a new milestone
@@ -119,6 +132,140 @@ class MilestoneService {
   }
 
   /**
+   * Create a new checkpoint under a milestone
+   */
+  async createCheckpoint(
+    milestoneId: Types.ObjectId | string,
+    checkpoint: CreateCheckpointData,
+    createdBy: Types.ObjectId
+  ): Promise<IMilestone | null> {
+    try {
+      const milestone = await Milestone.findById(milestoneId);
+      if (!milestone) {
+        throw new Error('Milestone not found');
+      }
+
+      // Validate personas if provided
+      if (checkpoint.personaSignOffs && checkpoint.personaSignOffs.length > 0) {
+        const personas = await Persona.find({
+          _id: { $in: checkpoint.personaSignOffs },
+          project: milestone.project,
+        });
+        if (personas.length !== checkpoint.personaSignOffs.length) {
+          throw new Error('One or more personas not found or do not belong to the project');
+        }
+      }
+
+      await milestone.addCheckpoint({
+        title: checkpoint.title,
+        description: checkpoint.description,
+        dueDate: checkpoint.dueDate,
+        requirements: checkpoint.requirements || [],
+        personaSignOffs: (checkpoint.personaSignOffs || []).map((id) => new Types.ObjectId(id as string)),
+      });
+
+      logger.info('Checkpoint created', { milestoneId, createdBy });
+      return await this.getMilestoneById(milestoneId);
+    } catch (error) {
+      logger.error('Error creating checkpoint', { error, milestoneId, checkpoint, createdBy });
+      throw error;
+    }
+  }
+
+  /**
+   * Update checkpoint data
+   */
+  async updateCheckpoint(
+    milestoneId: Types.ObjectId | string,
+    checkpointId: Types.ObjectId | string,
+    data: Partial<CreateCheckpointData & { status: 'pending' | 'in-progress' | 'completed' | 'overdue' }>,
+    updatedBy: Types.ObjectId
+  ): Promise<IMilestone | null> {
+    try {
+      const milestone = await Milestone.findById(milestoneId);
+      if (!milestone) {
+        throw new Error('Milestone not found');
+      }
+
+      await milestone.updateCheckpoint(new Types.ObjectId(checkpointId as string), {
+        title: data.title!,
+        description: data.description!,
+        dueDate: data.dueDate!,
+        status: data.status as any,
+        requirements: data.requirements!,
+      });
+
+      logger.info('Checkpoint updated', { milestoneId, checkpointId, updatedBy });
+      return await this.getMilestoneById(milestoneId);
+    } catch (error) {
+      logger.error('Error updating checkpoint', { error, milestoneId, checkpointId, data, updatedBy });
+      throw error;
+    }
+  }
+
+  /**
+   * Delete checkpoint
+   */
+  async deleteCheckpoint(
+    milestoneId: Types.ObjectId | string,
+    checkpointId: Types.ObjectId | string,
+    deletedBy: Types.ObjectId
+  ): Promise<IMilestone | null> {
+    try {
+      const milestone = await Milestone.findById(milestoneId);
+      if (!milestone) {
+        throw new Error('Milestone not found');
+      }
+      await milestone.deleteCheckpoint(new Types.ObjectId(checkpointId as string));
+      logger.info('Checkpoint deleted', { milestoneId, checkpointId, deletedBy });
+      return await this.getMilestoneById(milestoneId);
+    } catch (error) {
+      logger.error('Error deleting checkpoint', { error, milestoneId, checkpointId, deletedBy });
+      throw error;
+    }
+  }
+
+  /**
+   * Update checkpoint persona sign-off
+   */
+  async updateCheckpointSignOff(
+    milestoneId: Types.ObjectId | string,
+    checkpointId: Types.ObjectId | string,
+    signOffData: PersonaSignOffData,
+    updatedBy: Types.ObjectId
+  ): Promise<IMilestone | null> {
+    try {
+      const milestone = await Milestone.findById(milestoneId);
+      if (!milestone) {
+        throw new Error('Milestone not found');
+      }
+
+      // Validate persona exists and belongs to the project
+      const persona = await Persona.findOne({
+        _id: signOffData.personaId,
+        project: milestone.project,
+      });
+      if (!persona) {
+        throw new Error('Persona not found or does not belong to the project');
+      }
+
+      await milestone.updateCheckpointSignOff(
+        new Types.ObjectId(checkpointId as string),
+        new Types.ObjectId(signOffData.personaId as string),
+        signOffData.status,
+        signOffData.feedback,
+        signOffData.satisfactionScore
+      );
+
+      logger.info('Checkpoint sign-off updated', { milestoneId, checkpointId, personaId: signOffData.personaId, updatedBy });
+      return await this.getMilestoneById(milestoneId);
+    } catch (error) {
+      logger.error('Error updating checkpoint sign-off', { error, milestoneId, checkpointId, signOffData, updatedBy });
+      throw error;
+    }
+  }
+
+  /**
    * Get milestone by ID with populated references
    */
   async getMilestoneById(milestoneId: Types.ObjectId | string): Promise<IMilestone | null> {
@@ -128,7 +275,8 @@ class MilestoneService {
         .populate('personaSignOffs.persona', 'name role')
         .populate('submissions.student', 'firstName lastName email')
         .populate('submissions.artifacts', 'name type fileInfo')
-        .populate('evaluation.completedBy', 'firstName lastName');
+        .populate('evaluation.completedBy', 'firstName lastName')
+        .populate('checkpoints.personaSignOffs.persona', 'name role');
 
       return milestone;
     } catch (error) {
@@ -578,3 +726,4 @@ class MilestoneService {
 }
 
 export const milestoneService = new MilestoneService();
+export default milestoneService;

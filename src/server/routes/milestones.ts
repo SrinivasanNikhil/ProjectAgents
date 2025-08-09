@@ -398,33 +398,13 @@ router.put(
       });
     }
 
-    // Validate satisfaction score if provided
-    if (satisfactionScore !== undefined) {
-      if (typeof satisfactionScore !== 'number' || satisfactionScore < 1 || satisfactionScore > 10) {
-        return res.status(400).json({
-          success: false,
-          message: 'Satisfaction score must be a number between 1 and 10',
-        });
-      }
-    }
+    const milestone = await milestoneService.updatePersonaSignOff(
+      id,
+      { personaId, status, feedback, satisfactionScore },
+      req.user.id
+    );
 
-    const signOffData: PersonaSignOffData = {
-      personaId,
-      status,
-      feedback: feedback?.trim(),
-      satisfactionScore,
-    };
-
-    const milestone = await milestoneService.updatePersonaSignOff(id, signOffData, req.user.id);
-
-    if (!milestone) {
-      return res.status(404).json({
-        success: false,
-        message: 'Milestone not found',
-      });
-    }
-
-    logUserActivity(req.user.id, 'UpdatePersonaSignOff', {
+    logUserActivity(req.user.id, 'UpdateMilestoneSignOff', {
       milestoneId: id,
       personaId,
       status,
@@ -433,7 +413,7 @@ router.put(
     res.json({
       success: true,
       data: milestone,
-      message: 'Persona sign-off updated successfully',
+      message: 'Sign-off updated successfully',
     });
   })
 );
@@ -685,6 +665,160 @@ router.get(
       success: true,
       data: result.milestones,
     });
+  })
+);
+
+/**
+ * @route POST /api/milestones/:id/checkpoints
+ * @desc Create a checkpoint under a milestone
+ * @access Private (Instructor only)
+ */
+router.post(
+  '/:id/checkpoints',
+  authenticateToken,
+  requirePermission(PERMISSIONS.MILESTONE.WRITE),
+  asyncHandler(async (req: any, res: Response) => {
+    const { id } = req.params;
+    const { title, description, dueDate, requirements, personaSignOffs } = req.body;
+
+    if (!validateObjectId(id)) {
+      return res.status(400).json({ success: false, message: 'Invalid milestone ID' });
+    }
+
+    if (!title || !description || !dueDate) {
+      return res.status(400).json({
+        success: false,
+        message: 'Missing required fields: title, description, dueDate',
+      });
+    }
+
+    const due = new Date(dueDate);
+    if (isNaN(due.getTime())) {
+      return res.status(400).json({ success: false, message: 'Invalid due date' });
+    }
+
+    if (personaSignOffs && Array.isArray(personaSignOffs)) {
+      const invalid = personaSignOffs.filter((p: string) => !validateObjectId(p));
+      if (invalid.length > 0) {
+        return res.status(400).json({ success: false, message: 'Invalid persona IDs in personaSignOffs' });
+      }
+    }
+
+    const milestone = await milestoneService.createCheckpoint(
+      id,
+      { title: title.trim(), description: description.trim(), dueDate: due, requirements, personaSignOffs },
+      req.user.id
+    );
+
+    logUserActivity(req.user.id, 'CreateCheckpoint', { milestoneId: id, title });
+
+    res.status(201).json({ success: true, data: milestone, message: 'Checkpoint created successfully' });
+  })
+);
+
+/**
+ * @route PUT /api/milestones/:id/checkpoints/:checkpointId
+ * @desc Update checkpoint
+ * @access Private (Instructor only)
+ */
+router.put(
+  '/:id/checkpoints/:checkpointId',
+  authenticateToken,
+  requirePermission(PERMISSIONS.MILESTONE.WRITE),
+  asyncHandler(async (req: any, res: Response) => {
+    const { id, checkpointId } = req.params;
+    const { title, description, dueDate, status, requirements } = req.body;
+
+    if (!validateObjectId(id) || !validateObjectId(checkpointId)) {
+      return res.status(400).json({ success: false, message: 'Invalid IDs' });
+    }
+
+    let due: Date | undefined;
+    if (dueDate) {
+      due = new Date(dueDate);
+      if (isNaN(due.getTime())) {
+        return res.status(400).json({ success: false, message: 'Invalid due date' });
+      }
+    }
+
+    if (status && !['pending', 'in-progress', 'completed', 'overdue'].includes(status)) {
+      return res.status(400).json({ success: false, message: 'Invalid checkpoint status' });
+    }
+
+    const milestone = await milestoneService.updateCheckpoint(
+      id,
+      checkpointId,
+      { title, description, dueDate: due as any, status, requirements },
+      req.user.id
+    );
+
+    logUserActivity(req.user.id, 'UpdateCheckpoint', { milestoneId: id, checkpointId, status });
+    res.json({ success: true, data: milestone, message: 'Checkpoint updated successfully' });
+  })
+);
+
+/**
+ * @route DELETE /api/milestones/:id/checkpoints/:checkpointId
+ * @desc Delete checkpoint
+ * @access Private (Instructor only)
+ */
+router.delete(
+  '/:id/checkpoints/:checkpointId',
+  authenticateToken,
+  requirePermission(PERMISSIONS.MILESTONE.DELETE),
+  asyncHandler(async (req: any, res: Response) => {
+    const { id, checkpointId } = req.params;
+
+    if (!validateObjectId(id) || !validateObjectId(checkpointId)) {
+      return res.status(400).json({ success: false, message: 'Invalid IDs' });
+    }
+
+    const milestone = await milestoneService.deleteCheckpoint(id, checkpointId, req.user.id);
+
+    logUserActivity(req.user.id, 'DeleteCheckpoint', { milestoneId: id, checkpointId });
+    res.json({ success: true, data: milestone, message: 'Checkpoint deleted successfully' });
+  })
+);
+
+/**
+ * @route PUT /api/milestones/:id/checkpoints/:checkpointId/sign-off
+ * @desc Update checkpoint persona sign-off
+ * @access Private
+ */
+router.put(
+  '/:id/checkpoints/:checkpointId/sign-off',
+  authenticateToken,
+  requirePermission(PERMISSIONS.MILESTONE.EVALUATE),
+  asyncHandler(async (req: any, res: Response) => {
+    const { id, checkpointId } = req.params;
+    const { personaId, status, feedback, satisfactionScore }: PersonaSignOffData = req.body;
+
+    if (!validateObjectId(id) || !validateObjectId(checkpointId)) {
+      return res.status(400).json({ success: false, message: 'Invalid IDs' });
+    }
+
+    if (!personaId || !status) {
+      return res.status(400).json({ success: false, message: 'Missing required fields: personaId, status' });
+    }
+
+    if (!validateObjectId(personaId)) {
+      return res.status(400).json({ success: false, message: 'Invalid persona ID' });
+    }
+
+    const validStatuses = ['pending', 'approved', 'rejected', 'requested-changes'];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({ success: false, message: 'Invalid sign-off status' });
+    }
+
+    const milestone = await milestoneService.updateCheckpointSignOff(
+      id,
+      checkpointId,
+      { personaId, status, feedback, satisfactionScore },
+      req.user.id
+    );
+
+    logUserActivity(req.user.id, 'UpdateCheckpointSignOff', { milestoneId: id, checkpointId, personaId, status });
+    res.json({ success: true, data: milestone, message: 'Checkpoint sign-off updated successfully' });
   })
 );
 
