@@ -38,7 +38,7 @@
 - `src/server/models/PersonaMood.test.ts` - Unit tests for PersonaMood model
 - `src/server/models/Conversation.ts` - Conversation and message models
 - `src/server/models/Conversation.test.ts` - Unit tests for Conversation model
-- `src/server/models/Milestone.ts` - Comprehensive milestone data model with persona sign-offs, submissions, evaluation rubrics, and relationships to Project, User, Persona, and Artifact models
+- `src/server/models/Milestone.ts` - Comprehensive milestone data model with persona sign-offs, submissions, evaluation rubrics, checkpoints subdocuments, and relationships to Project, User, Persona, and Artifact models
 - `src/server/models/Milestone.test.ts` - Comprehensive unit tests for Milestone model covering schema validation, relationships, instance methods, virtual fields, and database operations
 - `src/server/models/Meeting.ts` - Meeting model for scheduled milestone meetings with participants, agenda, and meeting management
 - `src/server/models/Meeting.test.ts` - Unit tests for Meeting model
@@ -232,6 +232,11 @@
   - [x] 5.1 Create milestone data models and relationships
   - [x] 5.2 Build milestone creation and management interface
   - [ ] 5.3 Implement milestone checkpoint system
+    - [x] 5.3.1 Backend model support for checkpoints (schema, indexes, helpers)
+    - [x] 5.3.2 Service layer methods for checkpoint CRUD and sign-offs
+    - [x] 5.3.3 API routes for checkpoint management
+    - [ ] 5.3.4 Frontend UI to create/manage checkpoints within milestones
+    - [ ] 5.3.5 Unit tests for model, service, routes, and UI
   - [ ] 5.4 Create persona sign-off functionality
   - [ ] 5.5 Build custom evaluation rubric system
   - [ ] 5.6 Implement milestone completion tracking
