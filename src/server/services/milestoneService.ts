@@ -63,6 +63,14 @@ export interface SubmissionData {
   description: string;
 }
 
+export interface MilestoneFeedbackData {
+  from: Types.ObjectId | string;
+  to: Types.ObjectId | string;
+  rating: number;
+  comments: string;
+  submissionId?: Types.ObjectId | string;
+}
+
 export interface CreateCheckpointData {
   title: string;
   description: string;
@@ -584,6 +592,62 @@ class MilestoneService {
       return await this.getMilestoneById(milestoneId);
     } catch (error) {
       logger.error('Error adding submission', { error, milestoneId, submissionData });
+      throw error;
+    }
+  }
+
+  /**
+   * Add formal feedback to a milestone
+   */
+  async addFeedback(
+    milestoneId: Types.ObjectId | string,
+    feedback: MilestoneFeedbackData
+  ): Promise<IMilestone | null> {
+    try {
+      const milestone = await Milestone.findById(milestoneId);
+      if (!milestone) {
+        throw new Error('Milestone not found');
+      }
+
+      // Validate users exist
+      const [fromUser, toUser] = await Promise.all([
+        User.findById(feedback.from),
+        User.findById(feedback.to),
+      ]);
+      if (!fromUser) {
+        throw new Error('Feedback provider not found');
+      }
+      if (!toUser) {
+        throw new Error('Feedback recipient not found');
+      }
+
+      // Validate rating bounds
+      if (typeof feedback.rating !== 'number' || feedback.rating < 1 || feedback.rating > 5) {
+        throw new Error('Invalid rating');
+      }
+
+      // Append feedback entry
+      (milestone as any).feedback = (milestone as any).feedback || [];
+      (milestone as any).feedback.push({
+        from: new Types.ObjectId(feedback.from as string),
+        to: new Types.ObjectId(feedback.to as string),
+        submissionId: feedback.submissionId ? new Types.ObjectId(feedback.submissionId as string) : undefined,
+        rating: feedback.rating,
+        comments: feedback.comments,
+        submittedAt: new Date(),
+      });
+
+      await milestone.save();
+
+      logger.info('Feedback added to milestone', {
+        milestoneId,
+        from: feedback.from,
+        to: feedback.to,
+      });
+
+      return await this.getMilestoneById(milestoneId);
+    } catch (error) {
+      logger.error('Error adding feedback to milestone', { error, milestoneId, feedback });
       throw error;
     }
   }

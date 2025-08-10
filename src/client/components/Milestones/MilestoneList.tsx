@@ -15,6 +15,7 @@ import {
   ArrowDownIcon
 } from '@heroicons/react/24/outline';
 import MilestoneSignOffModal from './MilestoneSignOffModal';
+import MilestoneFeedbackModal from './MilestoneFeedbackModal';
 
 interface Milestone {
   _id: string;
@@ -103,6 +104,7 @@ const MilestoneList: React.FC<MilestoneListProps> = ({
   const [showFilters, setShowFilters] = useState(false);
   const [selectedMilestone, setSelectedMilestone] = useState<string | null>(null);
   const [signOffModalMilestone, setSignOffModalMilestone] = useState<Milestone | null>(null);
+  const [feedbackModalInfo, setFeedbackModalInfo] = useState<{ milestone: Milestone; studentId: string } | null>(null);
 
   const fetchMilestones = useCallback(async () => {
     try {
@@ -605,6 +607,19 @@ const MilestoneList: React.FC<MilestoneListProps> = ({
                                   Manage Sign-offs
                                 </button>
                               )}
+                              {isInstructor && milestone.submissions.length > 0 && (
+                                <button
+                                  onClick={() => {
+                                    const firstSubmission = milestone.submissions[0];
+                                    setFeedbackModalInfo({ milestone, studentId: firstSubmission.student._id });
+                                    setSelectedMilestone(null);
+                                  }}
+                                  className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                                >
+                                  <PencilIcon className="w-4 h-4 mr-3" />
+                                  Submit Feedback
+                                </button>
+                              )}
                               {isInstructor && onEditMilestone && (
                                 <button
                                   onClick={() => {
@@ -650,6 +665,20 @@ const MilestoneList: React.FC<MilestoneListProps> = ({
           onUpdated={(updated) => {
             setMilestones(prev => prev.map(m => m._id === updated._id ? updated : m));
             setSignOffModalMilestone(updated);
+          }}
+        />
+      )}
+      {feedbackModalInfo && (
+        <MilestoneFeedbackModal
+          milestoneId={feedbackModalInfo.milestone._id}
+          isOpen={!!feedbackModalInfo}
+          onClose={() => setFeedbackModalInfo(null)}
+          evaluatorId={currentUserId || ''}
+          recipientId={feedbackModalInfo.studentId}
+          defaultSubmissionId={feedbackModalInfo.milestone.submissions[0]?._id}
+          onSubmitted={(updated) => {
+            setMilestones(prev => prev.map(m => m._id === updated._id ? updated : m));
+            setFeedbackModalInfo(null);
           }}
         />
       )}

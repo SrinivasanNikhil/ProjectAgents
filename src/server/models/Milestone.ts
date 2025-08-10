@@ -65,6 +65,15 @@ export interface IMilestone extends Document {
       satisfactionScore?: number;
     }>;
   }>;
+  // NEW: Formal feedback entries for the milestone
+  feedback: Array<{
+    from: Types.ObjectId; // User providing feedback
+    to: Types.ObjectId; // User (student) receiving feedback
+    submissionId?: Types.ObjectId; // Optional: link to a specific submission subdocument _id
+    rating: number; // 1-5
+    comments: string;
+    submittedAt: Date;
+  }>;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -271,6 +280,41 @@ const milestoneSchema = new Schema<IMilestone>(
         ],
       },
     ],
+    // NEW: Formal feedback array
+    feedback: [
+      {
+        from: {
+          type: Schema.Types.ObjectId,
+          ref: 'User',
+          required: true,
+        },
+        to: {
+          type: Schema.Types.ObjectId,
+          ref: 'User',
+          required: true,
+        },
+        submissionId: {
+          type: Schema.Types.ObjectId,
+        },
+        rating: {
+          type: Number,
+          required: true,
+          min: [1, 'Rating must be at least 1'],
+          max: [5, 'Rating cannot exceed 5'],
+        },
+        comments: {
+          type: String,
+          required: true,
+          trim: true,
+          maxlength: [2000, 'Feedback comments cannot exceed 2000 characters'],
+        },
+        submittedAt: {
+          type: Date,
+          required: true,
+          default: Date.now,
+        },
+      },
+    ],
     evaluation: {
       rubric: {
         type: [
@@ -367,6 +411,8 @@ milestoneSchema.index({ 'personaSignOffs.persona': 1 });
 milestoneSchema.index({ 'checkpoints.dueDate': 1 });
 milestoneSchema.index({ 'checkpoints.status': 1 });
 milestoneSchema.index({ 'checkpoints.personaSignOffs.persona': 1 });
+milestoneSchema.index({ 'feedback.to': 1 });
+milestoneSchema.index({ 'feedback.from': 1 });
 
 // Method to check if milestone is overdue
 milestoneSchema.methods.isOverdue = function () {
