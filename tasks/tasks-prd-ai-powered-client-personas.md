@@ -58,6 +58,7 @@
 - `src/server/routes/analytics.ts` - Analytics and monitoring routes with conversation analytics, persona analytics, team performance, interaction patterns, department analytics, export functionality, and batch processing endpoints
 - `src/server/routes/analytics.test.ts` - Unit tests for analytics routes with comprehensive test coverage
 - `src/server/routes/milestones.ts` - Full milestone API routes with authentication, validation, CRUD endpoints, sign-offs, submissions, analytics, and filtering
+- `src/server/routes/milestones.test.ts` - Unit tests for milestone routes including completion endpoint validation and success cases
 - `src/server/routes/milestones.test.ts` - Unit tests for milestone routes
 - `src/server/routes/artifacts.ts` - File upload and artifact routes with comprehensive CRUD operations
 - `src/server/routes/artifacts.test.ts` - Unit tests for artifact routes
