@@ -18,6 +18,7 @@ vi.mock('../services/milestoneService', () => {
     updateCheckpoint: vi.fn(async () => ({})),
     updateCheckpointSignOff: vi.fn(async () => ({})),
     completeMilestone: vi.fn(async () => ({ _id: '507f1f77bcf86cd799439011', status: 'completed' })),
+    addFeedback: vi.fn(async () => ({ _id: '507f1f77bcf86cd799439011' })),
   };
   return { milestoneService: service };
 });
@@ -144,5 +145,43 @@ describe('Milestones Checkpoints Routes', () => {
     expect(res.body.success).toBe(true);
     expect(res.body.data.status).toBe('completed');
     expect(res.body.message).toBe('Milestone marked as completed');
+  });
+
+  it('POST /:id/feedback should validate IDs and required fields', async () => {
+    // Invalid milestone ID
+    await request(app)
+      .post('/api/milestones/invalid-id/feedback')
+      .send({ from: '507f1f77bcf86cd799439011', to: '507f1f77bcf86cd799439012', rating: 4, comments: 'Good job' })
+      .expect(400);
+
+    const id = '507f1f77bcf86cd799439011';
+    // Missing fields
+    await request(app)
+      .post(`/api/milestones/${id}/feedback`)
+      .send({})
+      .expect(400);
+
+    // Invalid user IDs
+    await request(app)
+      .post(`/api/milestones/${id}/feedback`)
+      .send({ from: 'bad', to: 'also-bad', rating: 5, comments: 'ok' })
+      .expect(400);
+
+    // Invalid submissionId
+    await request(app)
+      .post(`/api/milestones/${id}/feedback`)
+      .send({ from: '507f1f77bcf86cd799439011', to: '507f1f77bcf86cd799439012', rating: 5, comments: 'ok', submissionId: 'bad' })
+      .expect(400);
+  });
+
+  it('POST /:id/feedback should call service and return 201', async () => {
+    const id = '507f1f77bcf86cd799439011';
+    const res = await request(app)
+      .post(`/api/milestones/${id}/feedback`)
+      .send({ from: '507f1f77bcf86cd799439011', to: '507f1f77bcf86cd799439012', rating: 4, comments: 'Well done' })
+      .expect(201);
+
+    expect(res.body.success).toBe(true);
+    expect(res.body.message).toBe('Feedback added successfully');
   });
 });

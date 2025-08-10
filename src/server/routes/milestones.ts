@@ -525,6 +525,45 @@ router.post(
 );
 
 /**
+ * @route POST /api/milestones/:id/feedback
+ * @desc Add formal feedback entry to a milestone
+ * @access Private (Instructor/Persona as evaluator)
+ */
+router.post(
+  '/:id/feedback',
+  authenticateToken,
+  requirePermission(PERMISSIONS.MILESTONE.EVALUATE),
+  asyncHandler(async (req: any, res: Response) => {
+    const { id } = req.params;
+    const { from, to, rating, comments, submissionId } = req.body as {
+      from: string; to: string; rating: number; comments: string; submissionId?: string;
+    };
+
+    if (!validateObjectId(id)) {
+      return res.status(400).json({ success: false, message: 'Invalid milestone ID' });
+    }
+
+    if (!from || !to || !comments || typeof rating !== 'number') {
+      return res.status(400).json({ success: false, message: 'Missing required fields: from, to, rating, comments' });
+    }
+
+    if (!validateObjectId(from) || !validateObjectId(to)) {
+      return res.status(400).json({ success: false, message: 'Invalid user IDs in feedback' });
+    }
+
+    if (submissionId && !validateObjectId(submissionId)) {
+      return res.status(400).json({ success: false, message: 'Invalid submissionId' });
+    }
+
+    const updated = await milestoneService.addFeedback(id, { from, to, rating, comments: String(comments).trim(), submissionId });
+
+    logUserActivity(req.user.id, 'AddMilestoneFeedback', { milestoneId: id, from, to });
+
+    res.status(201).json({ success: true, data: updated, message: 'Feedback added successfully' });
+  })
+);
+
+/**
  * @route GET /api/milestones/project/:projectId/summary
  * @desc Get project milestones summary
  * @access Private
