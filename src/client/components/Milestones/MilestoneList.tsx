@@ -196,6 +196,24 @@ const MilestoneList: React.FC<MilestoneListProps> = ({
     }
   };
 
+  const handleCompleteMilestone = async (milestone: Milestone) => {
+    try {
+      const response = await fetch(`/api/milestones/${milestone._id}/complete`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        },
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data?.message || 'Failed to complete milestone');
+      }
+      setMilestones(prev => prev.map(m => m._id === milestone._id ? data.data : m));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to complete milestone');
+    }
+  };
+
   const getStatusIcon = (status: Milestone['status']) => {
     switch (status) {
       case 'completed':
@@ -563,6 +581,18 @@ const MilestoneList: React.FC<MilestoneListProps> = ({
                                 <EyeIcon className="w-4 h-4 mr-3" />
                                 View Details
                               </button>
+                              {isInstructor && milestone.status !== 'completed' && (
+                                <button
+                                  onClick={() => {
+                                    handleCompleteMilestone(milestone);
+                                    setSelectedMilestone(null);
+                                  }}
+                                  className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                                >
+                                  <CheckCircleIcon className="w-4 h-4 mr-3" />
+                                  Mark as Complete
+                                </button>
+                              )}
                               {isInstructor && (
                                 <button
                                   onClick={() => {

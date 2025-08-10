@@ -324,6 +324,38 @@ router.put(
 );
 
 /**
+ * @route PUT /api/milestones/:id/complete
+ * @desc Mark milestone as completed
+ * @access Private (Instructor only)
+ */
+router.put(
+  '/:id/complete',
+  authenticateToken,
+  requirePermission(PERMISSIONS.MILESTONE.EVALUATE),
+  asyncHandler(async (req: any, res: Response) => {
+    const { id } = req.params;
+
+    if (!validateObjectId(id)) {
+      return res.status(400).json({ success: false, message: 'Invalid milestone ID' });
+    }
+
+    try {
+      const milestone = await milestoneService.completeMilestone(id, req.user.id);
+      if (!milestone) {
+        return res.status(404).json({ success: false, message: 'Milestone not found' });
+      }
+
+      logUserActivity(req.user.id, 'CompleteMilestone', { milestoneId: id });
+
+      res.json({ success: true, data: milestone, message: 'Milestone marked as completed' });
+    } catch (error: any) {
+      // Business rule validation errors return 400
+      return res.status(400).json({ success: false, message: error?.message || 'Failed to complete milestone' });
+    }
+  })
+);
+
+/**
  * @route DELETE /api/milestones/:id
  * @desc Delete milestone
  * @access Private (Instructor only)
