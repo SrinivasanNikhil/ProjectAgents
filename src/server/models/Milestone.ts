@@ -272,36 +272,46 @@ const milestoneSchema = new Schema<IMilestone>(
       },
     ],
     evaluation: {
-      rubric: [
-        {
-          criterion: {
-            type: String,
-            required: true,
-            trim: true,
-            maxlength: [100, 'Criterion cannot exceed 100 characters'],
+      rubric: {
+        type: [
+          {
+            criterion: {
+              type: String,
+              required: true,
+              trim: true,
+              maxlength: [100, 'Criterion cannot exceed 100 characters'],
+            },
+            weight: {
+              type: Number,
+              required: true,
+              min: [1, 'Weight must be at least 1%'],
+              max: [100, 'Weight cannot exceed 100%'],
+            },
+            maxScore: {
+              type: Number,
+              required: true,
+              min: [1, 'Max score must be at least 1'],
+            },
+            description: {
+              type: String,
+              required: true,
+              trim: true,
+              maxlength: [
+                300,
+                'Criterion description cannot exceed 300 characters',
+              ],
+            },
           },
-          weight: {
-            type: Number,
-            required: true,
-            min: [0, 'Weight cannot be negative'],
-            max: [100, 'Weight cannot exceed 100'],
+        ],
+        validate: {
+          validator: function (this: any, rubric: Array<{ weight: number }>) {
+            if (!rubric || rubric.length === 0) return true;
+            const total = rubric.reduce((sum, c) => sum + (c.weight || 0), 0);
+            return Math.abs(total - 100) < 0.01;
           },
-          maxScore: {
-            type: Number,
-            required: true,
-            min: [1, 'Max score must be at least 1'],
-          },
-          description: {
-            type: String,
-            required: true,
-            trim: true,
-            maxlength: [
-              300,
-              'Criterion description cannot exceed 300 characters',
-            ],
-          },
+          message: 'Rubric criteria weights must sum to 100%',
         },
-      ],
+      },
       scores: {
         type: Map,
         of: Number,

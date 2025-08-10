@@ -627,6 +627,25 @@ describe('Milestone Model', () => {
 
       await expect(Milestone.create(invalidRubric)).rejects.toThrow();
     });
+
+    it('should enforce rubric weights must sum to 100%', async () => {
+      const invalidSum = {
+        project: testProject._id,
+        name: 'Invalid Sum',
+        description: 'Test description',
+        dueDate: new Date(),
+        type: 'deliverable',
+        evaluation: {
+          rubric: [
+            { criterion: 'A', weight: 60, maxScore: 10, description: 'A' },
+            { criterion: 'B', weight: 30, maxScore: 10, description: 'B' },
+          ],
+          scores: new Map(),
+          feedback: new Map(),
+        },
+      };
+      await expect(Milestone.create(invalidSum)).rejects.toThrow('Rubric criteria weights must sum to 100%');
+    });
   });
 
   describe('Settings Validation', () => {
