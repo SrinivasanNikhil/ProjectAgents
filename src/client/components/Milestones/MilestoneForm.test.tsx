@@ -154,6 +154,7 @@ describe('MilestoneForm', () => {
         expect(screen.getByText('Basic Info')).toBeInTheDocument();
         expect(screen.getByText('Requirements')).toBeInTheDocument();
         expect(screen.getByText('Evaluation')).toBeInTheDocument();
+        expect(screen.getByText('Checkpoints')).toBeInTheDocument();
         expect(screen.getByText('Settings')).toBeInTheDocument();
       });
     });
@@ -625,6 +626,113 @@ describe('MilestoneForm', () => {
       await waitFor(() => {
         expect(screen.getByText('Updating...')).toBeInTheDocument();
       });
+    });
+  });
+
+  describe('Checkpoints Tab', () => {
+    const milestoneWithNoCheckpoints = {
+      ...mockMilestone,
+      checkpoints: [],
+    };
+
+    const milestoneWithCheckpoints = {
+      ...mockMilestone,
+      checkpoints: [
+        {
+          _id: 'cp1',
+          title: 'Design Draft',
+          description: 'Submit design draft',
+          dueDate: '2024-02-05',
+          status: 'pending',
+          personaSignOffs: [],
+        },
+      ],
+    };
+
+    it('should show message when milestone is new (no checkpoint management yet)', async () => {
+      render(<MilestoneForm {...defaultProps} />);
+
+      await waitFor(() => expect(screen.getByText('Basic Info')).toBeInTheDocument());
+
+      fireEvent.click(screen.getByText('Checkpoints'));
+      expect(screen.getByText('You can manage checkpoints after creating the milestone.')).toBeInTheDocument();
+    });
+
+    it('should render existing checkpoints and allow entering add mode', async () => {
+      render(<MilestoneForm {...defaultProps} milestone={milestoneWithCheckpoints as any} />);
+
+      await waitFor(() => expect(screen.getByText('Edit Milestone')).toBeInTheDocument());
+
+      fireEvent.click(screen.getByText('Checkpoints'));
+      expect(screen.getByTestId('checkpoint-list')).toBeInTheDocument();
+      expect(screen.getByText('Design Draft')).toBeInTheDocument();
+
+      fireEvent.click(screen.getByText('Add Checkpoint'));
+      expect(screen.getByTestId('add-checkpoint-form')).toBeInTheDocument();
+    });
+
+    it('should add a checkpoint via API and update list', async () => {
+      render(<MilestoneForm {...defaultProps} milestone={milestoneWithNoCheckpoints as any} />);
+
+      await waitFor(() => expect(screen.getByText('Edit Milestone')).toBeInTheDocument());
+      fireEvent.click(screen.getByText('Checkpoints'));
+
+      fireEvent.click(screen.getByText('Add Checkpoint'));
+      const titleInput = screen.getByPlaceholderText('Checkpoint title');
+      const descInput = screen.getByPlaceholderText('Checkpoint description');
+      const dateInputs = screen.getAllByDisplayValue('', { selector: 'input[type="date"]' });
+      const dueInput = dateInputs[0];
+
+      fireEvent.change(titleInput, { target: { value: 'API Checkpoint' } });
+      fireEvent.change(descInput, { target: { value: 'Via test' } });
+      fireEvent.change(dueInput, { target: { value: '2024-02-10' } });
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ success: true, data: { checkpoints: [ { _id: 'cp2', title: 'API Checkpoint', description: 'Via test', dueDate: '2024-02-10', status: 'pending', personaSignOffs: [] } ] } }),
+      });
+
+      fireEvent.click(screen.getByText('Save Checkpoint'));
+
+      await waitFor(() => expect(screen.queryByTestId('add-checkpoint-form')).not.toBeInTheDocument());
+      expect(screen.getByText('API Checkpoint')).toBeInTheDocument();
+    });
+
+    it('should edit and delete a checkpoint via API', async () => {
+      render(<MilestoneForm {...defaultProps} milestone={milestoneWithCheckpoints as any} />);
+
+      await waitFor(() => expect(screen.getByText('Edit Milestone')).toBeInTheDocument());
+      fireEvent.click(screen.getByText('Checkpoints'));
+
+      // Enter edit mode
+      fireEvent.click(screen.getByText('Edit'));
+
+      // Mock update API
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ success: true, data: { checkpoints: [ { _id: 'cp1', title: 'Design Draft (Updated)', description: 'Submit design draft', dueDate: '2024-02-05', status: 'in-progress', personaSignOffs: [] } ] } }),
+      });
+
+      // Change title then save
+      const titleInputs = screen.getAllByPlaceholderText('Title');
+      fireEvent.change(titleInputs[0], { target: { value: 'Design Draft (Updated)' } });
+      fireEvent.click(screen.getByText('Save'));
+
+      await waitFor(() => expect(screen.getByText(/Design Draft \(Updated\)/)).toBeInTheDocument());
+
+      // Mock delete API
+      // Stub window.confirm to auto-accept
+      const originalConfirm = window.confirm;
+      // @ts-ignore
+      window.confirm = () => true;
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ success: true, data: { checkpoints: [] } }),
+      });
+
+      fireEvent.click(screen.getByText('Delete'));
+      await waitFor(() => expect(screen.queryByText('Design Draft (Updated)')).not.toBeInTheDocument());
+      window.confirm = originalConfirm;
     });
   });
 });

@@ -105,8 +105,17 @@ const MilestoneForm: React.FC<MilestoneFormProps> = ({
   const [personas, setPersonas] = useState<Persona[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [activeTab, setActiveTab] = useState<
-    'basic' | 'requirements' | 'evaluation' | 'settings'
+    'basic' | 'requirements' | 'evaluation' | 'settings' | 'checkpoints'
   >('basic');
+  const [checkpoints, setCheckpoints] = useState<any[]>(milestone?.checkpoints || []);
+  const [isAddingCheckpoint, setIsAddingCheckpoint] = useState(false);
+  const [newCheckpoint, setNewCheckpoint] = useState({
+    title: '',
+    description: '',
+    dueDate: '',
+    requirements: [] as Array<{ title: string; description: string; isRequired: boolean; type: 'file' | 'text' | 'link' | 'presentation' }>,
+    personaSignOffs: [] as string[],
+  });
 
   // Load project and personas
   useEffect(() => {
@@ -168,6 +177,7 @@ const MilestoneForm: React.FC<MilestoneFormProps> = ({
           autoCloseAfterDays: milestone.settings?.autoCloseAfterDays ?? 7,
         },
       });
+      setCheckpoints(milestone.checkpoints || []);
     }
   }, [milestone]);
 
@@ -373,6 +383,7 @@ const MilestoneForm: React.FC<MilestoneFormProps> = ({
     { id: 'basic', name: 'Basic Info', icon: InformationCircleIcon },
     { id: 'requirements', name: 'Requirements', icon: ClockIcon },
     { id: 'evaluation', name: 'Evaluation', icon: CalendarIcon },
+    { id: 'checkpoints', name: 'Checkpoints', icon: ClockIcon },
     { id: 'settings', name: 'Settings', icon: InformationCircleIcon },
   ];
 
@@ -718,6 +729,150 @@ const MilestoneForm: React.FC<MilestoneFormProps> = ({
                   </div>
                 ))}
               </div>
+            )}
+          </div>
+        )}
+
+        {/* Checkpoints Tab */}
+        {activeTab === 'checkpoints' && (
+          <div className="space-y-6">
+            {!milestone && (
+              <div className="rounded-md bg-yellow-50 p-4 text-sm text-yellow-800">
+                You can manage checkpoints after creating the milestone.
+              </div>
+            )}
+
+            {milestone && (
+              <>
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-medium text-gray-900">Checkpoints</h3>
+                  <button
+                    type="button"
+                    className="inline-flex items-center px-3 py-2 text-sm font-medium rounded-md bg-blue-600 text-white hover:bg-blue-700"
+                    onClick={() => setIsAddingCheckpoint(true)}
+                  >
+                    <PlusIcon className="w-4 h-4 mr-2" /> Add Checkpoint
+                  </button>
+                </div>
+
+                {isAddingCheckpoint && (
+                  <div className="border rounded-md p-4 space-y-4" data-testid="add-checkpoint-form">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Title *</label>
+                      <input
+                        type="text"
+                        value={newCheckpoint.title}
+                        onChange={(e) => setNewCheckpoint({ ...newCheckpoint, title: e.target.value })}
+                        className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 border-gray-300"
+                        placeholder="Checkpoint title"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Description *</label>
+                      <textarea
+                        value={newCheckpoint.description}
+                        onChange={(e) => setNewCheckpoint({ ...newCheckpoint, description: e.target.value })}
+                        rows={3}
+                        className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 border-gray-300"
+                        placeholder="Checkpoint description"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Due Date *</label>
+                      <input
+                        type="date"
+                        value={newCheckpoint.dueDate}
+                        onChange={(e) => setNewCheckpoint({ ...newCheckpoint, dueDate: e.target.value })}
+                        className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 border-gray-300"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Personas for Sign-off</label>
+                      <div className="space-y-2 max-h-40 overflow-auto border rounded p-2">
+                        {personas.map(p => (
+                          <label key={p._id} className="flex items-center space-x-2 text-sm">
+                            <input
+                              type="checkbox"
+                              checked={newCheckpoint.personaSignOffs.includes(p._id)}
+                              onChange={(e) => {
+                                const checked = e.target.checked;
+                                setNewCheckpoint((prev) => ({
+                                  ...prev,
+                                  personaSignOffs: checked
+                                    ? [...prev.personaSignOffs, p._id]
+                                    : prev.personaSignOffs.filter(id => id !== p._id),
+                                }));
+                              }}
+                            />
+                            <span>{p.name} ({p.role})</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-3">
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          if (!newCheckpoint.title.trim() || !newCheckpoint.description.trim() || !newCheckpoint.dueDate) {
+                            return;
+                          }
+                          try {
+                            const response = await fetch(`/api/milestones/${milestone._id}/checkpoints`, {
+                              method: 'POST',
+                              headers: {
+                                'Content-Type': 'application/json',
+                                Authorization: `Bearer ${localStorage.getItem('token')}`,
+                              },
+                              body: JSON.stringify({
+                                title: newCheckpoint.title.trim(),
+                                description: newCheckpoint.description.trim(),
+                                dueDate: newCheckpoint.dueDate,
+                                requirements: newCheckpoint.requirements,
+                                personaSignOffs: newCheckpoint.personaSignOffs,
+                              }),
+                            });
+                            if (response.ok) {
+                              const data = await response.json();
+                              setCheckpoints(data.data.checkpoints || []);
+                              setIsAddingCheckpoint(false);
+                              setNewCheckpoint({ title: '', description: '', dueDate: '', requirements: [], personaSignOffs: [] });
+                            }
+                          } catch (err) {
+                            console.error('Failed to add checkpoint', err);
+                          }
+                        }}
+                        className="px-3 py-2 text-sm rounded-md bg-blue-600 text-white hover:bg-blue-700"
+                      >
+                        Save Checkpoint
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsAddingCheckpoint(false);
+                          setNewCheckpoint({ title: '', description: '', dueDate: '', requirements: [], personaSignOffs: [] });
+                        }}
+                        className="px-3 py-2 text-sm rounded-md bg-gray-100 text-gray-800 hover:bg-gray-200"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                <div className="space-y-3" data-testid="checkpoint-list">
+                  {checkpoints.length === 0 && (
+                    <div className="text-sm text-gray-600">No checkpoints yet.</div>
+                  )}
+                  {checkpoints.map((cp: any) => (
+                    <CheckpointItem
+                      key={cp._id || cp.title}
+                      milestoneId={milestone._id}
+                      checkpoint={cp}
+                      onUpdated={(updated) => setCheckpoints(updated)}
+                    />
+                  ))}
+                </div>
+              </>
             )}
           </div>
         )}
@@ -1078,27 +1233,22 @@ const MilestoneForm: React.FC<MilestoneFormProps> = ({
         )}
 
         {/* Form Actions */}
-        <div className="flex items-center justify-end space-x-3 pt-6 border-t border-gray-200">
+        <div className="mt-8 flex justify-end space-x-3">
           <button
             type="button"
             onClick={onCancel}
-            className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
           >
             Cancel
           </button>
           <button
             type="submit"
             disabled={isLoading}
-            className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            className={`px-4 py-2 text-sm font-medium text-white rounded-md ${
+              isLoading ? 'bg-blue-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'
+            }`}
           >
-            {isLoading ? (
-              <>
-                <div className="animate-spin -ml-1 mr-2 h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
-                {milestone ? 'Updating...' : 'Creating...'}
-              </>
-            ) : (
-              <>{milestone ? 'Update Milestone' : 'Create Milestone'}</>
-            )}
+            {isLoading ? (milestone ? 'Updating...' : 'Creating...') : milestone ? 'Update Milestone' : 'Create Milestone'}
           </button>
         </div>
       </form>
@@ -1107,3 +1257,161 @@ const MilestoneForm: React.FC<MilestoneFormProps> = ({
 };
 
 export default MilestoneForm;
+
+// Checkpoint item sub-component
+const CheckpointItem: React.FC<{
+  milestoneId: string;
+  checkpoint: any;
+  onUpdated: (updatedCheckpoints: any[]) => void;
+}> = ({ milestoneId, checkpoint, onUpdated }) => {
+  const [isEditing, setIsEditing] = useState(false);
+  const [local, setLocal] = useState({
+    title: checkpoint.title || '',
+    description: checkpoint.description || '',
+    dueDate: checkpoint.dueDate ? new Date(checkpoint.dueDate).toISOString().split('T')[0] : '',
+    status: checkpoint.status || 'pending',
+  });
+  const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  const save = async () => {
+    setSaving(true);
+    try {
+      const response = await fetch(`/api/milestones/${milestoneId}/checkpoints/${checkpoint._id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
+        },
+        body: JSON.stringify({
+          title: local.title,
+          description: local.description,
+          dueDate: local.dueDate,
+          status: local.status,
+        }),
+      });
+      if (response.ok) {
+        const data = await response.json();
+        onUpdated(data.data.checkpoints || []);
+        setIsEditing(false);
+      }
+    } catch (err) {
+      console.error('Failed to update checkpoint', err);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const remove = async () => {
+    if (!confirm('Delete this checkpoint?')) return;
+    setDeleting(true);
+    try {
+      const response = await fetch(`/api/milestones/${milestoneId}/checkpoints/${checkpoint._id}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
+        },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        onUpdated(data.data.checkpoints || []);
+      }
+    } catch (err) {
+      console.error('Failed to delete checkpoint', err);
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  return (
+    <div className="border rounded-md p-4">
+      {!isEditing ? (
+        <div className="flex items-start justify-between">
+          <div>
+            <div className="font-medium text-gray-900">{checkpoint.title}</div>
+            <div className="text-sm text-gray-600 mt-1">{checkpoint.description}</div>
+            <div className="text-xs text-gray-500 mt-1">Due: {new Date(checkpoint.dueDate).toISOString().split('T')[0]}</div>
+            <div className="text-xs mt-1">
+              <span className={`inline-block px-2 py-0.5 rounded ${
+                checkpoint.status === 'completed' ? 'bg-green-100 text-green-800' :
+                checkpoint.status === 'in-progress' ? 'bg-blue-100 text-blue-800' :
+                checkpoint.status === 'overdue' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-800'
+              }`}>
+                {checkpoint.status}
+              </span>
+            </div>
+          </div>
+          <div className="flex items-center space-x-2">
+            <button
+              type="button"
+              className="px-2 py-1 text-sm rounded bg-gray-100 hover:bg-gray-200"
+              onClick={() => setIsEditing(true)}
+            >
+              Edit
+            </button>
+            <button
+              type="button"
+              className="px-2 py-1 text-sm rounded bg-red-600 text-white hover:bg-red-700"
+              onClick={remove}
+              disabled={deleting}
+            >
+              {deleting ? 'Deleting...' : 'Delete'}
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <input
+              type="text"
+              value={local.title}
+              onChange={(e) => setLocal({ ...local, title: e.target.value })}
+              className="px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 border-gray-300"
+              placeholder="Title"
+            />
+            <input
+              type="date"
+              value={local.dueDate}
+              onChange={(e) => setLocal({ ...local, dueDate: e.target.value })}
+              className="px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 border-gray-300"
+            />
+            <select
+              value={local.status}
+              onChange={(e) => setLocal({ ...local, status: e.target.value as any })}
+              className="px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 border-gray-300"
+            >
+              <option value="pending">Pending</option>
+              <option value="in-progress">In Progress</option>
+              <option value="completed">Completed</option>
+              <option value="overdue">Overdue</option>
+            </select>
+          </div>
+          <textarea
+            value={local.description}
+            onChange={(e) => setLocal({ ...local, description: e.target.value })}
+            rows={3}
+            className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 border-gray-300"
+            placeholder="Description"
+          />
+          <div className="flex items-center space-x-2">
+            <button
+              type="button"
+              onClick={save}
+              disabled={saving}
+              className="px-3 py-2 text-sm rounded-md bg-blue-600 text-white hover:bg-blue-700"
+            >
+              {saving ? 'Saving...' : 'Save'}
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsEditing(false)}
+              className="px-3 py-2 text-sm rounded-md bg-gray-100 text-gray-800 hover:bg-gray-200"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};

@@ -235,8 +235,8 @@
     - [x] 5.3.1 Backend model support for checkpoints (schema, indexes, helpers)
     - [x] 5.3.2 Service layer methods for checkpoint CRUD and sign-offs
     - [x] 5.3.3 API routes for checkpoint management
-    - [ ] 5.3.4 Frontend UI to create/manage checkpoints within milestones
-    - [ ] 5.3.5 Unit tests for model, service, routes, and UI
+    - [x] 5.3.4 Frontend UI to create/manage checkpoints within milestones
+    - [x] 5.3.5 Unit tests for model, service, routes, and UI
   - [ ] 5.4 Create persona sign-off functionality
   - [ ] 5.5 Build custom evaluation rubric system
   - [ ] 5.6 Implement milestone completion tracking

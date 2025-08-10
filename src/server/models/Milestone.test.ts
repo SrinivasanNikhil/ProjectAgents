@@ -188,6 +188,78 @@ describe('Milestone Model', () => {
       });
     });
 
+    describe('Checkpoint helpers', () => {
+      it('should add a checkpoint with default status and empty requirements', async () => {
+        await milestone.addCheckpoint({
+          title: 'Draft Review',
+          description: 'Review the first draft',
+          dueDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
+          personaSignOffs: [testPersona._id],
+        });
+
+        const reloaded = await Milestone.findById(milestone._id);
+        expect(reloaded?.checkpoints).toHaveLength(1);
+        const cp: any = reloaded?.checkpoints[0];
+        expect(cp.title).toBe('Draft Review');
+        expect(cp.status).toBe('pending');
+        expect(cp.personaSignOffs).toHaveLength(1);
+        expect(cp.personaSignOffs[0].persona.toString()).toBe(testPersona._id.toString());
+      });
+
+      it('should update a checkpoint fields and status', async () => {
+        await milestone.addCheckpoint({
+          title: 'Draft Review',
+          description: 'Review the first draft',
+          dueDate: new Date(),
+        });
+        const created = (await Milestone.findById(milestone._id))!;
+        const cpId = created.checkpoints[0]._id as any;
+
+        await created.updateCheckpoint(cpId, {
+          title: 'Draft Review (Updated)',
+          status: 'in-progress',
+        });
+
+        const updated = await Milestone.findById(milestone._id);
+        const cp: any = updated?.checkpoints.id(cpId);
+        expect(cp.title).toBe('Draft Review (Updated)');
+        expect(cp.status).toBe('in-progress');
+      });
+
+      it('should delete a checkpoint', async () => {
+        await milestone.addCheckpoint({
+          title: 'To Delete',
+          description: 'Temp',
+          dueDate: new Date(),
+        });
+        const created = (await Milestone.findById(milestone._id))!;
+        const cpId = created.checkpoints[0]._id as any;
+
+        await created.deleteCheckpoint(cpId);
+
+        const updated = await Milestone.findById(milestone._id);
+        expect(updated?.checkpoints).toHaveLength(0);
+      });
+
+      it('should update checkpoint persona sign-off and auto-complete when all approved', async () => {
+        await milestone.addCheckpoint({
+          title: 'Signoff',
+          description: 'Needs approval',
+          dueDate: new Date(),
+          personaSignOffs: [testPersona._id],
+        });
+        const created = (await Milestone.findById(milestone._id))!;
+        const cpId = created.checkpoints[0]._id as any;
+
+        await created.updateCheckpointSignOff(cpId, testPersona._id, 'approved', 'ok', 9);
+
+        const updated = await Milestone.findById(milestone._id);
+        const cp: any = updated?.checkpoints.id(cpId);
+        expect(cp.personaSignOffs[0].status).toBe('approved');
+        expect(cp.status).toBe('completed');
+      });
+    });
+
     describe('isOverdue()', () => {
       it('should return false for future due date', () => {
         expect(milestone.isOverdue()).toBe(false);
