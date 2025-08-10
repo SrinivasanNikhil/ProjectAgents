@@ -11,17 +11,21 @@ vi.mock('../middleware/auth', () => ({
 }));
 vi.mock('../middleware/roleCheck', () => ({
   requirePermission: vi.fn(() => (req: any, res: any, next: any) => next()),
-  PERMISSIONS: { MILESTONE: { EVALUATE: 'milestone:evaluate' } },
+  PERMISSIONS: { MILESTONE: { EVALUATE: 'milestone:evaluate', READ: 'milestone:read', WRITE: 'milestone:write', DELETE: 'milestone:delete' } },
 }));
-vi.mock('../services/milestoneService', () => ({
-  default: class MockSvc {
-    updateCheckpoint() { return Promise.resolve({}); }
-    updateCheckpointSignOff() { return Promise.resolve({}); }
-  }
-}));
+vi.mock('../services/milestoneService', () => {
+  const service = {
+    updateCheckpoint: vi.fn(async () => ({})),
+    updateCheckpointSignOff: vi.fn(async () => ({})),
+    completeMilestone: vi.fn(async () => ({ _id: '507f1f77bcf86cd799439011', status: 'completed' })),
+  };
+  return { milestoneService: service };
+});
 
 const mockAuthenticateToken = vi.mocked(authenticateToken);
 const mockRequirePermission = vi.mocked(requirePermission);
+// Bring in the mocked service to override behavior per-test
+import { milestoneService as mockedMilestoneService } from '../services/milestoneService';
 
 describe('Milestones Checkpoints Routes', () => {
   let app: express.Application;
@@ -107,5 +111,38 @@ describe('Milestones Checkpoints Routes', () => {
       .put(`/api/milestones/${id}/sign-off`)
       .send({ personaId: '507f1f77bcf86cd799439011', status: 'not-a-status' })
       .expect(400);
+  });
+
+  // New tests for milestone completion tracking endpoint
+  it('PUT /:id/complete should validate milestone ID', async () => {
+    await request(app)
+      .put('/api/milestones/invalid-id/complete')
+      .send()
+      .expect(400);
+  });
+
+  it('PUT /:id/complete should return 404 when milestone not found', async () => {
+    (mockedMilestoneService.completeMilestone as any).mockResolvedValueOnce(null);
+
+    await request(app)
+      .put('/api/milestones/507f1f77bcf86cd799439099/complete')
+      .send()
+      .expect(404);
+  });
+
+  it('PUT /:id/complete should mark milestone as completed', async () => {
+    (mockedMilestoneService.completeMilestone as any).mockResolvedValueOnce({
+      _id: '507f1f77bcf86cd799439011',
+      status: 'completed',
+    });
+
+    const res = await request(app)
+      .put('/api/milestones/507f1f77bcf86cd799439011/complete')
+      .send()
+      .expect(200);
+
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.status).toBe('completed');
+    expect(res.body.message).toBe('Milestone marked as completed');
   });
 });
