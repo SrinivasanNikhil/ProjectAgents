@@ -511,6 +511,106 @@ describe('MilestoneService', () => {
     });
   });
 
+  describe('checkpoint operations', () => {
+    let testMilestone: any;
+
+    beforeEach(async () => {
+      testMilestone = await Milestone.create({
+        project: testProject._id,
+        name: 'Test Milestone',
+        description: 'Test description',
+        dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        type: 'deliverable',
+      });
+    });
+
+    it('should create a checkpoint', async () => {
+      const result = await milestoneService.createCheckpoint(
+        testMilestone._id,
+        {
+          title: 'CP1',
+          description: 'Desc',
+          dueDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000),
+          personaSignOffs: [testPersona._id],
+        },
+        testInstructor._id
+      );
+
+      expect(result?.checkpoints).toHaveLength(1);
+      expect(result?.checkpoints[0].title).toBe('CP1');
+      expect(result?.checkpoints[0].personaSignOffs).toHaveLength(1);
+    });
+
+    it('should update a checkpoint', async () => {
+      const created = await milestoneService.createCheckpoint(
+        testMilestone._id,
+        {
+          title: 'CP1',
+          description: 'Desc',
+          dueDate: new Date(),
+        },
+        testInstructor._id
+      );
+      const cpId = created?.checkpoints[0]._id as any;
+
+      const updated = await milestoneService.updateCheckpoint(
+        testMilestone._id,
+        cpId,
+        { title: 'CP1 Updated', status: 'in-progress' },
+        testInstructor._id
+      );
+
+      const cp: any = updated?.checkpoints.find((c: any) => c._id.toString() === cpId.toString());
+      expect(cp.title).toBe('CP1 Updated');
+      expect(cp.status).toBe('in-progress');
+    });
+
+    it('should delete a checkpoint', async () => {
+      const created = await milestoneService.createCheckpoint(
+        testMilestone._id,
+        {
+          title: 'CP1',
+          description: 'Desc',
+          dueDate: new Date(),
+        },
+        testInstructor._id
+      );
+      const cpId = created?.checkpoints[0]._id as any;
+
+      const afterDelete = await milestoneService.deleteCheckpoint(
+        testMilestone._id,
+        cpId,
+        testInstructor._id
+      );
+
+      expect(afterDelete?.checkpoints).toHaveLength(0);
+    });
+
+    it('should update checkpoint sign-off', async () => {
+      const created = await milestoneService.createCheckpoint(
+        testMilestone._id,
+        {
+          title: 'CP1',
+          description: 'Desc',
+          dueDate: new Date(),
+          personaSignOffs: [testPersona._id],
+        },
+        testInstructor._id
+      );
+      const cpId = created?.checkpoints[0]._id as any;
+
+      const updated = await milestoneService.updateCheckpointSignOff(
+        testMilestone._id,
+        cpId,
+        { personaId: testPersona._id, status: 'approved', feedback: 'ok', satisfactionScore: 8 },
+        testInstructor._id
+      );
+
+      const cp: any = updated?.checkpoints.find((c: any) => c._id.toString() === cpId.toString());
+      expect(cp.personaSignOffs[0].status).toBe('approved');
+    });
+  });
+
   describe('addSubmission', () => {
     let testMilestone: any;
 
