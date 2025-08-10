@@ -14,6 +14,7 @@ import {
   ArrowUpIcon,
   ArrowDownIcon
 } from '@heroicons/react/24/outline';
+import MilestoneSignOffModal from './MilestoneSignOffModal';
 
 interface Milestone {
   _id: string;
@@ -101,6 +102,7 @@ const MilestoneList: React.FC<MilestoneListProps> = ({
   });
   const [showFilters, setShowFilters] = useState(false);
   const [selectedMilestone, setSelectedMilestone] = useState<string | null>(null);
+  const [signOffModalMilestone, setSignOffModalMilestone] = useState<Milestone | null>(null);
 
   const fetchMilestones = useCallback(async () => {
     try {
@@ -549,7 +551,7 @@ const MilestoneList: React.FC<MilestoneListProps> = ({
                         </button>
                         
                         {selectedMilestone === milestone._id && (
-                          <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-10 border border-gray-200">
+                          <div className="absolute right-0 mt-2 w-56 bg-white rounded-md shadow-lg z-10 border border-gray-200">
                             <div className="py-1">
                               <button
                                 onClick={() => {
@@ -561,6 +563,18 @@ const MilestoneList: React.FC<MilestoneListProps> = ({
                                 <EyeIcon className="w-4 h-4 mr-3" />
                                 View Details
                               </button>
+                              {isInstructor && (
+                                <button
+                                  onClick={() => {
+                                    setSignOffModalMilestone(milestone);
+                                    setSelectedMilestone(null);
+                                  }}
+                                  className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                                >
+                                  <CheckCircleIcon className="w-4 h-4 mr-3" />
+                                  Manage Sign-offs
+                                </button>
+                              )}
                               {isInstructor && onEditMilestone && (
                                 <button
                                   onClick={() => {
@@ -596,6 +610,18 @@ const MilestoneList: React.FC<MilestoneListProps> = ({
             </tbody>
           </table>
         </div>
+      )}
+      {signOffModalMilestone && (
+        <MilestoneSignOffModal
+          milestoneId={signOffModalMilestone._id}
+          personaSignOffs={signOffModalMilestone.personaSignOffs as any}
+          isOpen={!!signOffModalMilestone}
+          onClose={() => setSignOffModalMilestone(null)}
+          onUpdated={(updated) => {
+            setMilestones(prev => prev.map(m => m._id === updated._id ? updated : m));
+            setSignOffModalMilestone(updated);
+          }}
+        />
       )}
     </div>
   );

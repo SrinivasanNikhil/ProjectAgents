@@ -150,6 +150,8 @@
 - `src/client/components/Meetings/MeetingForm.test.tsx` - Unit tests for meeting form component
 - `src/client/components/Artifacts/ArtifactList.tsx` - Artifact display component
 - `src/client/components/Artifacts/ArtifactList.test.tsx` - Unit tests for artifact list
+- `src/client/components/Milestones/MilestoneSignOffModal.tsx` - Persona sign-off management modal with API integration to update sign-off status, feedback, and satisfaction score
+- `src/client/components/Milestones/MilestoneSignOffModal.test.tsx` - Unit tests for the persona sign-off modal
 
 ### Utilities and Hooks
 
@@ -237,7 +239,7 @@
     - [x] 5.3.3 API routes for checkpoint management
     - [x] 5.3.4 Frontend UI to create/manage checkpoints within milestones
     - [x] 5.3.5 Unit tests for model, service, routes, and UI
-  - [ ] 5.4 Create persona sign-off functionality
+  - [x] 5.4 Create persona sign-off functionality
   - [ ] 5.5 Build custom evaluation rubric system
   - [ ] 5.6 Implement milestone completion tracking
   - [ ] 5.7 Create formal feedback collection system
@@ -337,7 +339,7 @@ The problematic code is:
 
 If `prev[parent as keyof TemplateFormData]` is `undefined`, spreading it will cause a runtime error.
 
-**Fix:** Default to an empty object if undefined:
+Fix: Default to an empty object if undefined:
 
 ```ts
 [parent]: {
