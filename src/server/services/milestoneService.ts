@@ -132,6 +132,45 @@ class MilestoneService {
   }
 
   /**
+   * Mark milestone as completed with validation
+   */
+  async completeMilestone(
+    milestoneId: Types.ObjectId | string,
+    completedBy: Types.ObjectId
+  ): Promise<IMilestone | null> {
+    try {
+      const milestone = await Milestone.findById(milestoneId);
+      if (!milestone) {
+        throw new Error('Milestone not found');
+      }
+
+      // If approvals are required, ensure all persona approvals are approved
+      if (milestone.settings.requireAllPersonaApprovals) {
+        const hasPersonaApprovals = milestone.personaSignOffs && milestone.personaSignOffs.length > 0;
+        const allApproved = hasPersonaApprovals && milestone.personaSignOffs.every((s: any) => s.status === 'approved');
+        if (!allApproved) {
+          throw new Error('All required persona approvals must be approved before completion');
+        }
+      }
+
+      // Set evaluation completion metadata
+      (milestone as any).evaluation = (milestone as any).evaluation || {};
+      (milestone as any).evaluation.completedBy = new Types.ObjectId(completedBy as string);
+      (milestone as any).evaluation.completedAt = new Date();
+
+      // Update status
+      milestone.status = 'completed';
+      await milestone.save();
+
+      logger.info('Milestone marked as completed', { milestoneId, completedBy });
+      return await this.getMilestoneById(milestoneId);
+    } catch (error) {
+      logger.error('Error completing milestone', { error, milestoneId, completedBy });
+      throw error;
+    }
+  }
+
+  /**
    * Create a new checkpoint under a milestone
    */
   async createCheckpoint(
