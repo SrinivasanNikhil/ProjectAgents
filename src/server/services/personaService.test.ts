@@ -5,12 +5,19 @@ import { Persona } from '../models/Persona';
 import { Project } from '../models/Project';
 import { User } from '../models/User';
 import { aiService } from '../config/ai';
+import { aiCacheService } from './aiCacheService';
+import { conversationContextService } from './contextService';
 
 // Mock dependencies
 vi.mock('../models/Persona');
 vi.mock('../models/Project');
 vi.mock('../models/User');
 vi.mock('../config/ai');
+vi.mock('./contextService', () => ({
+  conversationContextService: {
+    buildPreviousMessages: vi.fn().mockResolvedValue({ previousMessages: [], conversationId: 'c1' }),
+  },
+}));
 vi.mock('../config/logger', () => ({
   logger: {
     info: vi.fn(),
@@ -629,6 +636,70 @@ Conflicts: May conflict with developers on implementation details
 
       expect(result).toHaveLength(1);
       expect(result[0].role).toBe('UI/UX Designer');
+    });
+  });
+
+  describe('AI response caching', () => {
+    const mockUserId = '507f1f77bcf86cd799439011';
+    const mockProjectId = '507f1f77bcf86cd799439012';
+    const mockPersonaId = '507f1f77bcf86cd799439013';
+
+    beforeEach(() => {
+      vi.clearAllMocks();
+      aiCacheService.clear();
+    });
+
+    it('returns cached response on repeated identical requests and avoids duplicate AI calls', async () => {
+      // Arrange persona and permissions
+      (Persona as any).findById = vi.fn().mockResolvedValue({
+        _id: mockPersonaId,
+        aiConfiguration: { model: 'gpt-4', temperature: 0.7, maxTokens: 1000, systemPrompt: 'sys' },
+        canInteractWithUser: vi.fn().mockResolvedValue(true),
+      });
+
+
+      // Mock AI service to return deterministic response
+      (aiService as any).generatePersonaResponse = vi.fn().mockResolvedValue({
+        content: 'Hello, this is a response',
+        confidence: 0.9,
+        metadata: { responseTime: 50, model: 'gpt-4', tokensUsed: 42 },
+      });
+
+      const request = {
+        personaId: mockPersonaId,
+        personaContext: {
+          name: 'Alex',
+          role: 'Client',
+          background: 'Background',
+          personality: {
+            traits: ['calm'],
+            communicationStyle: 'formal',
+            decisionMakingStyle: 'analytical',
+            priorities: ['quality'],
+            goals: ['success'],
+          },
+          currentMood: 60,
+          conversationHistory: [],
+          projectKnowledge: [],
+        },
+        userMessage: 'Can you review the proposal? ',
+        conversationContext: { projectId: mockProjectId, previousMessages: [] },
+        constraints: { maxResponseLength: 200 },
+      } as any;
+
+      // Act: first call triggers AI
+      const first = await personaService.generatePersonaResponseWithAI(request, mockUserId);
+
+      // Act: second call identical request should hit cache
+      const second = await personaService.generatePersonaResponseWithAI(request, mockUserId);
+
+      // Assert
+      expect((aiService as any).generatePersonaResponse).toHaveBeenCalledTimes(1);
+      expect(first.content).toBeDefined();
+      expect(second.content).toBeDefined();
+      expect(second.filtering.reasons).toContain('cache-hit');
+
+
     });
   });
 });
