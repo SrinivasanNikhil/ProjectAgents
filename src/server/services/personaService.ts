@@ -13,6 +13,7 @@ import {
 import { conversationContextService } from './contextService';
 import { memoryService } from './memoryService';
 import { responseFilterService } from './responseFilterService';
+import { aiCacheService } from './aiCacheService';
 
 export interface CreatePersonaData {
   name: string;
@@ -1107,6 +1108,37 @@ Remember: You are a realistic simulation of a ${role}, not an AI assistant. Resp
         },
       };
 
+      // Attempt cache lookup
+      const cacheKey = aiCacheService.buildPersonaResponseKey({
+        personaId: request.personaId,
+        projectId: request.conversationContext.projectId,
+        userMessage: request.userMessage,
+        previousMessages,
+        constraints: request.constraints,
+        aiConfig: {
+          model: persona.aiConfiguration?.model,
+          temperature: persona.aiConfiguration?.temperature,
+          maxTokens: persona.aiConfiguration?.maxTokens,
+          systemPrompt: persona.aiConfiguration?.systemPrompt,
+        },
+      });
+
+      const cached = aiCacheService.get(cacheKey);
+      if (cached) {
+        // Return cached response with diagnostic indicating cache hit
+        return {
+          ...cached,
+          filtering: {
+            qualityScore: 1,
+            relevanceScore: 1,
+            lengthScore: 1,
+            wasModified: false,
+            reasons: ['cache-hit'],
+            warnings: [],
+          },
+        };
+      }
+
       // Generate response using AI
       const aiResponse = await aiService.generatePersonaResponse(enrichedRequest);
 
@@ -1115,6 +1147,9 @@ Remember: You are a realistic simulation of a ${role}, not an AI assistant. Resp
         enrichedRequest,
         aiResponse
       );
+
+      // Store in cache
+      aiCacheService.set(cacheKey, filteredResponse);
 
       // Update persona mood if there's a mood change
       if (filteredResponse.moodChange) {
