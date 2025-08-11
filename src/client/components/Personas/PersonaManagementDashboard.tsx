@@ -594,9 +594,34 @@ export const PersonaManagementDashboard: React.FC<
             <PersonaCustomization
               personaId={selectedPersona._id}
               onSave={async data => {
-                // Handle customization save
-                setShowCustomization(false);
-                fetchData();
+                try {
+                  await axios.put(`/api/personas/${data.id}/customize`, {
+                    personality: {
+                      traits: data.personality.traits,
+                      communicationStyle: data.personality.communicationStyle,
+                      decisionMakingStyle: data.personality.decisionMakingStyle,
+                      priorities: data.personality.priorities,
+                      goals: data.personality.goals,
+                    },
+                    mood: {
+                      current: data.mood.current,
+                    },
+                    aiConfiguration: {
+                      model: data.aiConfiguration.model,
+                      temperature: data.aiConfiguration.temperature,
+                      maxTokens: data.aiConfiguration.maxTokens,
+                      systemPrompt: data.aiConfiguration.systemPrompt,
+                      contextWindow: data.aiConfiguration.contextWindow,
+                    },
+                    availability: {
+                      responseTime: data.availability.responseTime,
+                      workingHours: data.availability.workingHours,
+                    },
+                  });
+                } finally {
+                  setShowCustomization(false);
+                  fetchData();
+                }
               }}
               onCancel={() => setShowCustomization(false)}
             />
