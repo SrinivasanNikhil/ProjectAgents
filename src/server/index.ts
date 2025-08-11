@@ -25,6 +25,7 @@ import chatRoutes from './routes/chat';
 import moderationRoutes from './routes/moderation';
 import adminRoutes from './routes/admin';
 import milestoneRoutes from './routes/milestones';
+import conflictRoutes from './routes/conflicts';
 
 // Import middleware
 import { authenticateToken, optionalAuth } from './middleware/auth';
@@ -147,6 +148,7 @@ app.use('/api/chat', chatRoutes);
 app.use('/api/moderation', moderationRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/milestones', milestoneRoutes);
+app.use('/api/conflicts', conflictRoutes);
 
 // Protected routes example
 app.get('/api/protected', authenticateToken, (req, res) => {
