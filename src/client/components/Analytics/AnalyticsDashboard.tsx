@@ -140,6 +140,18 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ userId, userRol
   const [isExporting, setIsExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
 
+  // Milestone analytics state
+  const [milestonesViewProjectId, setMilestonesViewProjectId] = useState<string>('');
+  const [milestoneAnalytics, setMilestoneAnalytics] = useState<{
+    completionRate: number;
+    averageCompletionTime: number;
+    personaEngagement: Array<{ personaId: string; personaName: string; signOffCount: number; averageSatisfaction: number; }>;
+    milestoneTypeDistribution: Record<string, number>;
+    submissionStats: { totalSubmissions: number; averageSubmissionsPerMilestone: number; resubmissionRate: number; };
+  } | null>(null);
+  const [isLoadingMilestoneAnalytics, setIsLoadingMilestoneAnalytics] = useState(false);
+  const [milestoneAnalyticsError, setMilestoneAnalyticsError] = useState<string | null>(null);
+
   useEffect(() => {
     loadAnalyticsData();
   }, [userId]);
@@ -171,6 +183,10 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ userId, userRol
           ...prev,
           projectId: projectsRes.data.projects[0]._id,
         }));
+      }
+      // Default milestones tab project selection
+      if (projectsRes.data?.projects?.length > 0 && !milestonesViewProjectId) {
+        setMilestonesViewProjectId(projectsRes.data.projects[0]._id);
       }
 
     } catch (err: any) {
@@ -247,6 +263,123 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ userId, userRol
       setIsExporting(false);
     }
   };
+
+  const fetchMilestoneAnalytics = async (projectId: string) => {
+    if (!projectId) {
+      setMilestoneAnalytics(null);
+      return;
+    }
+    try {
+      setIsLoadingMilestoneAnalytics(true);
+      setMilestoneAnalyticsError(null);
+      const res = await axios.get(`/api/milestones/project/${projectId}/analytics`);
+      setMilestoneAnalytics(res.data?.data || res.data);
+    } catch (err: any) {
+      setMilestoneAnalyticsError('Failed to load milestone analytics');
+    } finally {
+      setIsLoadingMilestoneAnalytics(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeView === 'milestones' && milestonesViewProjectId) {
+      fetchMilestoneAnalytics(milestonesViewProjectId);
+    }
+  }, [activeView, milestonesViewProjectId]);
+
+  const formatDuration = (ms: number): string => {
+    if (!ms || ms <= 0) return '0h';
+    const hours = Math.floor(ms / (1000 * 60 * 60));
+    const days = Math.floor(hours / 24);
+    const remHours = hours % 24;
+    return days > 0 ? `${days}d ${remHours}h` : `${hours}h`;
+  };
+
+  const renderMilestonesSection = () => (
+    <div className="milestones-section">
+      <div className="controls">
+        <label htmlFor="milestones-project-select">Project:</label>
+        <select
+          id="milestones-project-select"
+          value={milestonesViewProjectId}
+          onChange={(e) => setMilestonesViewProjectId(e.target.value)}
+          className="form-control"
+        >
+          {projects.length === 0 && <option value="">No projects available</option>}
+          {projects.map(p => (
+            <option key={p._id} value={p._id}>{p.name}</option>
+          ))}
+        </select>
+        <button onClick={() => fetchMilestoneAnalytics(milestonesViewProjectId)} disabled={!milestonesViewProjectId || isLoadingMilestoneAnalytics} className="refresh-button">
+          🔄 Refresh
+        </button>
+      </div>
+
+      {milestoneAnalyticsError && (
+        <div className="error-state">{milestoneAnalyticsError}</div>
+      )}
+
+      {isLoadingMilestoneAnalytics && (
+        <div aria-busy role="progressbar">Loading milestone analytics...</div>
+      )}
+
+      {!isLoadingMilestoneAnalytics && milestoneAnalytics && (
+        <div className="milestone-analytics-grid">
+          <div className="card">
+            <h4>Completion Rate</h4>
+            <div className="metric">{milestoneAnalytics.completionRate.toFixed(1)}%</div>
+          </div>
+          <div className="card">
+            <h4>Avg Completion Time</h4>
+            <div className="metric">{formatDuration(milestoneAnalytics.averageCompletionTime)}</div>
+          </div>
+
+          <div className="card">
+            <h4>Milestone Type Distribution</h4>
+            <ul>
+              {Object.entries(milestoneAnalytics.milestoneTypeDistribution).map(([type, count]) => (
+                <li key={type}>{type}: {count}</li>
+              ))}
+              {Object.keys(milestoneAnalytics.milestoneTypeDistribution).length === 0 && <li>No data</li>}
+            </ul>
+          </div>
+
+          <div className="card">
+            <h4>Submission Stats</h4>
+            <div>Total: {milestoneAnalytics.submissionStats.totalSubmissions}</div>
+            <div>Avg/Milestone: {milestoneAnalytics.submissionStats.averageSubmissionsPerMilestone.toFixed(2)}</div>
+            <div>Resubmission Rate: {milestoneAnalytics.submissionStats.resubmissionRate.toFixed(1)}%</div>
+          </div>
+
+          <div className="card full-width">
+            <h4>Persona Engagement</h4>
+            {milestoneAnalytics.personaEngagement.length === 0 ? (
+              <div>No persona engagement yet</div>
+            ) : (
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th>Persona</th>
+                    <th>Sign-offs</th>
+                    <th>Avg Satisfaction</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {milestoneAnalytics.personaEngagement.map(p => (
+                    <tr key={p.personaId}>
+                      <td>{p.personaName}</td>
+                      <td>{p.signOffCount}</td>
+                      <td>{p.averageSatisfaction.toFixed(1)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
 
   const getContentType = (format: string): string => {
     switch (format) {
@@ -804,6 +937,12 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ userId, userRol
             Patterns
           </button>
           <button 
+            className={`tab ${activeView === 'milestones' ? 'active' : ''}`}
+            onClick={() => setActiveView('milestones')}
+          >
+            Milestones
+          </button>
+          <button 
             className={`tab ${activeView === 'export' ? 'active' : ''}`}
             onClick={() => setActiveView('export')}
           >
@@ -821,6 +960,7 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ userId, userRol
         {activeView === 'personas' && renderPersonaAnalytics()}
         {activeView === 'teams' && renderTeamPerformance()}
         {activeView === 'patterns' && renderInteractionPatterns()}
+        {activeView === 'milestones' && renderMilestonesSection()}
         {activeView === 'export' && renderExportSection()}
       </div>
     </div>

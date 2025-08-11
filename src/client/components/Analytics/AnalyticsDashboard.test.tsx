@@ -281,6 +281,77 @@ describe('AnalyticsDashboard', () => {
     expect(screen.getByText('3.5')).toBeInTheDocument();
   });
 
+  it('shows Milestones tab and loads milestone analytics for selected project', async () => {
+    mockedAxios.get.mockImplementation((url: string) => {
+      if (url.includes('/summary/')) return Promise.resolve({ data: mockSummaryData });
+      if (url.includes('/conversations/summary/')) return Promise.resolve({ data: mockConversationData });
+      if (url.includes('/personas/summary/')) return Promise.resolve({ data: mockPersonaData });
+      if (url.includes('/teams/performance/')) return Promise.resolve({ data: mockTeamData });
+      if (url.includes('/interactions/patterns/')) return Promise.resolve({ data: mockPatternData });
+      if (url.includes('/projects/instructor/')) return Promise.resolve({ data: { projects: [{ _id: 'project1', name: 'AI Project', status: 'active' }] } });
+      if (url.includes('/api/milestones/project/project1/analytics')) {
+        return Promise.resolve({ data: { success: true, data: {
+          completionRate: 50,
+          averageCompletionTime: 1000 * 60 * 60 * 30, // 30h
+          personaEngagement: [{ personaId: 'p1', personaName: 'Dr. Smith', signOffCount: 2, averageSatisfaction: 8 }],
+          milestoneTypeDistribution: { deliverable: 1, review: 1 },
+          submissionStats: { totalSubmissions: 3, averageSubmissionsPerMilestone: 1.5, resubmissionRate: 33.3 }
+        } } });
+      }
+      return Promise.reject(new Error('Unknown endpoint'));
+    });
+
+    render(<AnalyticsDashboard {...mockProps} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Analytics Dashboard')).toBeInTheDocument();
+    });
+
+    const milestonesTab = screen.getByRole('button', { name: 'Milestones' });
+    expect(milestonesTab).toBeInTheDocument();
+    fireEvent.click(milestonesTab);
+
+    await waitFor(() => {
+      expect(mockedAxios.get).toHaveBeenCalledWith('/api/milestones/project/project1/analytics');
+    });
+
+    expect(screen.getByText('Completion Rate')).toBeInTheDocument();
+    expect(screen.getByText('50.0%')).toBeInTheDocument();
+    expect(screen.getByText('Milestone Type Distribution')).toBeInTheDocument();
+    expect(screen.getByText('deliverable: 1')).toBeInTheDocument();
+    expect(screen.getByText('review: 1')).toBeInTheDocument();
+    expect(screen.getByText('Submission Stats')).toBeInTheDocument();
+    expect(screen.getByText('Total: 3')).toBeInTheDocument();
+    expect(screen.getByText('Avg/Milestone: 1.50')).toBeInTheDocument();
+    expect(screen.getByText('Resubmission Rate: 33.3%')).toBeInTheDocument();
+    expect(screen.getByText('Persona Engagement')).toBeInTheDocument();
+    expect(screen.getByText('Dr. Smith')).toBeInTheDocument();
+  });
+
+  it('handles milestone analytics loading and error states', async () => {
+    mockedAxios.get.mockImplementation((url: string) => {
+      if (url.includes('/summary/')) return Promise.resolve({ data: mockSummaryData });
+      if (url.includes('/conversations/summary/')) return Promise.resolve({ data: mockConversationData });
+      if (url.includes('/personas/summary/')) return Promise.resolve({ data: mockPersonaData });
+      if (url.includes('/teams/performance/')) return Promise.resolve({ data: mockTeamData });
+      if (url.includes('/interactions/patterns/')) return Promise.resolve({ data: mockPatternData });
+      if (url.includes('/projects/instructor/')) return Promise.resolve({ data: { projects: [{ _id: 'project1', name: 'AI Project', status: 'active' }] } });
+      if (url.includes('/api/milestones/project/project1/analytics')) {
+        return Promise.reject(new Error('boom'));
+      }
+      return Promise.reject(new Error('Unknown endpoint'));
+    });
+
+    render(<AnalyticsDashboard {...mockProps} />);
+    await waitFor(() => expect(screen.getByText('Analytics Dashboard')).toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole('button', { name: 'Milestones' }));
+
+    await waitFor(() => {
+      expect(screen.getByText('Failed to load milestone analytics')).toBeInTheDocument();
+    });
+  });
+
   it('handles API errors gracefully', async () => {
     mockedAxios.get.mockRejectedValue(new Error('API Error'));
 
