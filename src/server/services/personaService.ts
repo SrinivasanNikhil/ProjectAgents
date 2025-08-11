@@ -11,6 +11,7 @@ import {
   PersonaResponseRequest,
 } from '../config/ai';
 import { conversationContextService } from './contextService';
+import { memoryService } from './memoryService';
 
 export interface CreatePersonaData {
   name: string;
@@ -1138,6 +1139,20 @@ Remember: You are a realistic simulation of a ${role}, not an AI assistant. Resp
         tokensUsed: aiResponse.metadata.tokensUsed,
         confidence: aiResponse.confidence,
       });
+
+      // Update persona conversation memory with key points from context
+      try {
+        await memoryService.updatePersonaConversationMemory(
+          request.personaId,
+          request.conversationContext.projectId
+        );
+      } catch (memoryError) {
+        logger.warn('Failed to update persona conversation memory', {
+          personaId: request.personaId,
+          projectId: request.conversationContext.projectId,
+          error: memoryError,
+        });
+      }
 
       return aiResponse;
     } catch (error) {
