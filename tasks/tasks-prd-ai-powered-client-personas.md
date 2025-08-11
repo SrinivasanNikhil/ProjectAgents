@@ -13,7 +13,6 @@
 - `src/server/config/fileStorage.ts` - File storage configuration for S3 and local storage
 - `src/server/config/fileStorage.test.ts` - Unit tests for file storage configuration
 - `src/server/config/ai.ts` - AI service configuration and setup with OpenAI, Anthropic, and local AI support
-- `src/server/config/ai.test.ts` - Unit tests for AI configuration
 - `src/server/middleware/auth.ts` - Authentication middleware with JWT token verification, password validation, and user authentication
 - `src/server/middleware/auth.test.ts` - Unit tests for authentication middleware
 - `src/server/middleware/roleCheck.ts` - Role-based access control middleware
@@ -249,8 +248,8 @@
   - [x] 5.9 Implement persona satisfaction scoring
 
 - [ ] 6.0 AI Integration and Persona Intelligence
-  - [ ] 6.1 Set up AI service configuration and API integration
-  - [ ] 6.2 Implement conversation context management
+  - [x] 6.1 Set up AI service configuration and API integration
+  - [x] 6.2 Implement conversation context management
   - [ ] 6.3 Create personality consistency algorithms
   - [ ] 6.4 Build persona memory system for conversation history
   - [ ] 6.5 Implement mood tracking and response adaptation

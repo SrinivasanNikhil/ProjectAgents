@@ -10,6 +10,7 @@ import {
   PersonaGenerationRequest,
   PersonaResponseRequest,
 } from '../config/ai';
+import { conversationContextService } from './contextService';
 
 export interface CreatePersonaData {
   name: string;
@@ -1090,8 +1091,22 @@ Remember: You are a realistic simulation of a ${role}, not an AI assistant. Resp
         );
       }
 
+      // Build conversation context (previous messages) based on persona context window
+      const { conversationId, previousMessages } = await conversationContextService.buildPreviousMessages(
+        request.personaId,
+        request.conversationContext.projectId
+      );
+
+      const enrichedRequest: PersonaResponseRequest = {
+        ...request,
+        conversationContext: {
+          ...request.conversationContext,
+          previousMessages: previousMessages,
+        },
+      };
+
       // Generate response using AI
-      const aiResponse = await aiService.generatePersonaResponse(request);
+      const aiResponse = await aiService.generatePersonaResponse(enrichedRequest);
 
       // Update persona mood if there's a mood change
       if (aiResponse.moodChange) {
@@ -1107,7 +1122,7 @@ Remember: You are a realistic simulation of a ${role}, not an AI assistant. Resp
             },
             context: {
               userId: userId,
-              conversationId: request.conversationContext.projectId, // This should be actual conversation ID
+              conversationId: conversationId,
             },
             tags: ['ai-generated', 'conversation'],
           },
