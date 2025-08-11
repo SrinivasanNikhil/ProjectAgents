@@ -43,6 +43,7 @@
 - `src/server/models/Meeting.test.ts` - Unit tests for Meeting model
 - `src/server/models/Artifact.ts` - File upload and artifact models
 - `src/server/models/Artifact.test.ts` - Unit tests for Artifact model
+- `src/server/models/Conflict.ts` - Conflict model capturing project conflicts with status, severity, triggers, participants, and timestamps
 
 ### API Routes
 
@@ -67,6 +68,7 @@
 - `src/server/routes/monitoring.test.ts` - Unit tests for monitoring routes
 - `src/server/routes/admin.ts` - System administration routes for department-wide analytics
 - `src/server/routes/admin.test.ts` - Unit tests for admin routes
+- `src/server/routes/conflicts.ts` - API routes for conflict generation, detection, listing, and resolution
 
 ### Services
 
@@ -78,6 +80,7 @@
 - `src/server/services/chatService.test.ts` - Unit tests for chat service
 - `src/server/services/analyticsService.ts` - Analytics and reporting logic with comprehensive data collection, processing, conversation analytics, persona performance metrics, enhanced team performance tracking with conflict resolution detection and automated insights generation, interaction patterns analysis, department-wide analytics, and conversation log export functionality
 - `src/server/services/analyticsService.test.ts` - Unit tests for analytics service with comprehensive test coverage
+- `src/server/services/conflictService.ts` - Conflict generation, detection, listing, and resolution service integrating AI and chat notifications
 - `src/server/services/memoryService.ts` - Persona memory extraction and storage service for conversation history key points
 - `src/server/services/milestoneService.ts` - Complete milestone service with CRUD operations, persona sign-offs, submissions, analytics, and business logic
 - `src/server/services/milestoneService.test.ts` - Comprehensive unit tests for milestone service covering all methods and error cases
@@ -254,7 +257,7 @@
   - [x] 6.3 Create personality consistency algorithms
   - [x] 6.4 Build persona memory system for conversation history
   - [x] 6.5 Implement mood tracking and response adaptation
-  - [ ] 6.6 Create conflict generation and management system
+  - [x] 6.6 Create conflict generation and management system
   - [ ] 6.7 Build goal and priority management for personas
   - [ ] 6.8 Implement response quality and relevance filtering
   - [ ] 6.9 Create AI response caching and optimization
