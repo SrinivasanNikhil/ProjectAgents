@@ -536,6 +536,7 @@ router.post(
       success: true,
       message: 'Persona response generated successfully',
       data: response,
+      diagnostics: response.filtering ? response.filtering : undefined,
     });
   })
 );
