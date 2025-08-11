@@ -12,6 +12,7 @@ import {
 } from '../config/ai';
 import { conversationContextService } from './contextService';
 import { memoryService } from './memoryService';
+import { responseFilterService } from './responseFilterService';
 
 export interface CreatePersonaData {
   name: string;
@@ -1109,13 +1110,19 @@ Remember: You are a realistic simulation of a ${role}, not an AI assistant. Resp
       // Generate response using AI
       const aiResponse = await aiService.generatePersonaResponse(enrichedRequest);
 
+      // Apply quality and relevance filters
+      const { response: filteredResponse, diagnostics } = responseFilterService.applyResponseFilters(
+        enrichedRequest,
+        aiResponse
+      );
+
       // Update persona mood if there's a mood change
-      if (aiResponse.moodChange) {
+      if (filteredResponse.moodChange) {
         await this.updatePersonaMood(
           request.personaId,
           {
-            value: aiResponse.moodChange.value,
-            reason: aiResponse.moodChange.reason,
+            value: filteredResponse.moodChange.value,
+            reason: filteredResponse.moodChange.reason,
             trigger: {
               type: 'conversation',
               source: 'ai_response',
@@ -1134,10 +1141,10 @@ Remember: You are a realistic simulation of a ${role}, not an AI assistant. Resp
       // Log AI response generation
       logUserActivity(userId, 'GeneratePersonaResponseWithAI', {
         personaId: request.personaId,
-        aiModel: aiResponse.metadata.model,
-        responseTime: aiResponse.metadata.responseTime,
-        tokensUsed: aiResponse.metadata.tokensUsed,
-        confidence: aiResponse.confidence,
+        aiModel: filteredResponse.metadata.model,
+        responseTime: filteredResponse.metadata.responseTime,
+        tokensUsed: filteredResponse.metadata.tokensUsed,
+        confidence: filteredResponse.confidence,
       });
 
       // Update persona conversation memory with key points from context
@@ -1154,7 +1161,10 @@ Remember: You are a realistic simulation of a ${role}, not an AI assistant. Resp
         });
       }
 
-      return aiResponse;
+      return {
+        ...filteredResponse,
+        filtering: diagnostics,
+      };
     } catch (error) {
       logError(error as Error, 'PersonaService.generatePersonaResponseWithAI', {
         request,

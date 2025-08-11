@@ -74,6 +74,8 @@
 
 - `src/server/services/aiService.ts` - AI integration service for persona responses
 - `src/server/services/aiService.test.ts` - Unit tests for AI service
+- `src/server/services/responseFilterService.ts` - Response quality and relevance filtering for AI persona outputs, enforcing constraints and diagnostics
+- `src/server/services/responseFilterService.test.ts` - Unit tests for response filtering heuristics
 - `src/server/services/personaService.ts` - Persona generation and management logic with AI integration, templates, mood tracking, and instructor dashboard functionality
 - `src/server/services/personaService.test.ts` - Unit tests for persona service
 - `src/server/services/chatService.ts` - Real-time chat and messaging logic with WebSocket integration, message persistence, and conversation management
@@ -259,7 +261,7 @@
   - [x] 6.5 Implement mood tracking and response adaptation
   - [x] 6.6 Create conflict generation and management system
   - [x] 6.7 Build goal and priority management for personas
-  - [ ] 6.8 Implement response quality and relevance filtering
+  - [x] 6.8 Implement response quality and relevance filtering
   - [ ] 6.9 Create AI response caching and optimization
 
 - [ ] 7.0 User Authentication and Role-Based Access Control
