@@ -112,6 +112,8 @@ const PersonaCustomization: React.FC<PersonaCustomizationProps> = ({
     description: '',
     impact: 0,
   });
+  const [currentPriority, setCurrentPriority] = useState('');
+  const [currentGoal, setCurrentGoal] = useState('');
 
   useEffect(() => {
     loadPersonaData();
@@ -334,6 +336,7 @@ const PersonaCustomization: React.FC<PersonaCustomizationProps> = ({
             { id: 'response', label: 'Response Style' },
             { id: 'ai', label: 'AI Configuration' },
             { id: 'scenarios', label: 'Scenarios' },
+            { id: 'goals-priorities', label: 'Goals & Priorities' },
             { id: 'availability', label: 'Availability' },
           ].map(tab => (
             <button
@@ -1014,6 +1017,161 @@ const PersonaCustomization: React.FC<PersonaCustomizationProps> = ({
                 >
                   Add Scenario
                 </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Goals & Priorities Tab */}
+        {activeTab === 'goals-priorities' && (
+          <div className="space-y-8">
+            {/* Priorities */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Priorities (2-8)
+              </label>
+              <div className="flex gap-2 mb-2">
+                <input
+                  type="text"
+                  value={currentPriority}
+                  onChange={e => setCurrentPriority(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      if (
+                        currentPriority.trim() &&
+                        customizationData.personality.priorities.length < 8
+                      ) {
+                        handleInputChange('personality', 'priorities', [
+                          ...customizationData.personality.priorities,
+                          currentPriority.trim(),
+                        ]);
+                        setCurrentPriority('');
+                      }
+                    }
+                  }}
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Add a priority"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (
+                      currentPriority.trim() &&
+                      customizationData.personality.priorities.length < 8
+                    ) {
+                      handleInputChange('personality', 'priorities', [
+                        ...customizationData.personality.priorities,
+                        currentPriority.trim(),
+                      ]);
+                      setCurrentPriority('');
+                    }
+                  }}
+                  disabled={
+                    !currentPriority.trim() ||
+                    customizationData.personality.priorities.length >= 8
+                  }
+                  className="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                >
+                  Add Priority
+                </button>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {customizationData.personality.priorities.map((priority, index) => (
+                  <span
+                    key={`${priority}-${index}`}
+                    className="inline-flex items-center px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm"
+                  >
+                    {priority}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const next = customizationData.personality.priorities.filter(
+                          (_, i) => i !== index
+                        );
+                        handleInputChange('personality', 'priorities', next);
+                      }}
+                      className="ml-2 text-green-600 hover:text-green-800"
+                    >
+                      ×
+                    </button>
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            {/* Goals */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Goals (1-5)
+              </label>
+              <div className="flex gap-2 mb-2">
+                <input
+                  type="text"
+                  value={currentGoal}
+                  onChange={e => setCurrentGoal(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      if (
+                        currentGoal.trim() &&
+                        customizationData.personality.goals.length < 5
+                      ) {
+                        handleInputChange('personality', 'goals', [
+                          ...customizationData.personality.goals,
+                          currentGoal.trim(),
+                        ]);
+                        setCurrentGoal('');
+                      }
+                    }
+                  }}
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Add a goal"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (
+                      currentGoal.trim() &&
+                      customizationData.personality.goals.length < 5
+                    ) {
+                      handleInputChange('personality', 'goals', [
+                        ...customizationData.personality.goals,
+                        currentGoal.trim(),
+                      ]);
+                      setCurrentGoal('');
+                    }
+                  }}
+                  disabled={
+                    !currentGoal.trim() ||
+                    customizationData.personality.goals.length >= 5
+                  }
+                  className="px-4 py-2 bg-purple-500 text-white rounded-md hover:bg-purple-600 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                >
+                  Add Goal
+                </button>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {customizationData.personality.goals.map((goal, index) => (
+                  <span
+                    key={`${goal}-${index}`}
+                    className="inline-flex items-center px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-sm"
+                  >
+                    {goal}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const next = customizationData.personality.goals.filter(
+                          (_, i) => i !== index
+                        );
+                        handleInputChange('personality', 'goals', next);
+                      }}
+                      className="ml-2 text-purple-600 hover:text-purple-800"
+                    >
+                      ×
+                    </button>
+                  </span>
+                ))}
               </div>
             </div>
           </div>
