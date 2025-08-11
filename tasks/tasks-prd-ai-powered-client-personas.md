@@ -78,6 +78,7 @@
 - `src/server/services/chatService.test.ts` - Unit tests for chat service
 - `src/server/services/analyticsService.ts` - Analytics and reporting logic with comprehensive data collection, processing, conversation analytics, persona performance metrics, enhanced team performance tracking with conflict resolution detection and automated insights generation, interaction patterns analysis, department-wide analytics, and conversation log export functionality
 - `src/server/services/analyticsService.test.ts` - Unit tests for analytics service with comprehensive test coverage
+- `src/server/services/memoryService.ts` - Persona memory extraction and storage service for conversation history key points
 - `src/server/services/milestoneService.ts` - Complete milestone service with CRUD operations, persona sign-offs, submissions, analytics, and business logic
 - `src/server/services/milestoneService.test.ts` - Comprehensive unit tests for milestone service covering all methods and error cases
 - `src/server/services/fileService.ts` - File upload and storage logic with S3 and local storage support
@@ -251,7 +252,7 @@
   - [x] 6.1 Set up AI service configuration and API integration
   - [x] 6.2 Implement conversation context management
   - [x] 6.3 Create personality consistency algorithms
-  - [ ] 6.4 Build persona memory system for conversation history
+  - [x] 6.4 Build persona memory system for conversation history
   - [ ] 6.5 Implement mood tracking and response adaptation
   - [ ] 6.6 Create conflict generation and management system
   - [ ] 6.7 Build goal and priority management for personas
