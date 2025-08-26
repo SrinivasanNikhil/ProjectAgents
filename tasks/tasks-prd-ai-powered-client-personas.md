@@ -235,7 +235,7 @@
 - [x] 5.0 Assessment and Milestone Management
   - [x] 5.1 Create milestone data models and relationships
   - [x] 5.2 Build milestone creation and management interface
-  - [ ] 5.3 Implement milestone checkpoint system
+  - [x] 5.3 Implement milestone checkpoint system
     - [x] 5.3.1 Backend model support for checkpoints (schema, indexes, helpers)
     - [x] 5.3.2 Service layer methods for checkpoint CRUD and sign-offs
     - [x] 5.3.3 API routes for checkpoint management
