@@ -2,6 +2,15 @@ import { Request, Response, NextFunction } from 'express';
 import { IUser } from '../models/User';
 import { logger } from '../config/logger';
 
+// Extend Express Request interface to include user property
+declare global {
+  namespace Express {
+    interface Request {
+      user?: IUser;
+    }
+  }
+}
+
 // Define permission types
 export type Permission =
   | 'project:read'
@@ -32,7 +41,14 @@ export type Permission =
   | 'analytics:write'
   | 'system:admin'
   | 'system:config'
-  | 'system:monitor';
+  | 'system:monitor'
+  | 'meeting:read'
+  | 'meeting:write'
+  | 'meeting:delete'
+  | 'meeting:manage'
+  | 'conflict:read'
+  | 'conflict:write'
+  | 'conflict:resolve';
 
 // Define role permissions mapping
 export const ROLE_PERMISSIONS: Record<string, Permission[]> = {
@@ -46,6 +62,8 @@ export const ROLE_PERMISSIONS: Record<string, Permission[]> = {
     'artifact:read',
     'artifact:write',
     'user:read', // Can read their own profile and team members
+    'meeting:read',
+    'conflict:read',
   ],
   instructor: [
     'project:read',
@@ -67,6 +85,12 @@ export const ROLE_PERMISSIONS: Record<string, Permission[]> = {
     'user:write',
     'analytics:read',
     'analytics:write',
+    'meeting:read',
+    'meeting:write',
+    'meeting:manage',
+    'conflict:read',
+    'conflict:write',
+    'conflict:resolve',
   ],
   administrator: [
     'project:read',
@@ -98,6 +122,13 @@ export const ROLE_PERMISSIONS: Record<string, Permission[]> = {
     'system:admin',
     'system:config',
     'system:monitor',
+    'meeting:read',
+    'meeting:write',
+    'meeting:delete',
+    'meeting:manage',
+    'conflict:read',
+    'conflict:write',
+    'conflict:resolve',
   ],
 };
 
@@ -152,19 +183,20 @@ export const canAccessResource = async (
 
   // For project-specific resources, check project access
   if (
-    ['project', 'persona', 'conversation', 'milestone', 'artifact'].includes(
+    ['project', 'persona', 'conversation', 'milestone', 'artifact', 'meeting', 'conflict'].includes(
       resourceType
     )
   ) {
     return await user.canAccessProject(resourceId as any);
   }
 
-  // For user resources, check if it's their own profile or they have user management permissions
+  // For user resources, check if it's their own profile or they have the required permission
   if (resourceType === 'user') {
     if (resourceId === user._id?.toString()) {
       return true; // Users can always access their own profile
     }
-    return hasPermission(user, 'user:manage');
+    // For other user profiles, check if they have the required permission for the action
+    return hasPermission(user, action);
   }
 
   return true;
@@ -375,6 +407,10 @@ export const requireArtifactAccess = (action: Permission) =>
   requireResourceAccess('artifact', action);
 export const requireUserAccess = (action: Permission) =>
   requireResourceAccess('user', action);
+export const requireMeetingAccess = (action: Permission) =>
+  requireResourceAccess('meeting', action);
+export const requireConflictAccess = (action: Permission) =>
+  requireResourceAccess('conflict', action);
 
 // Utility function to get user permissions
 export const getUserPermissions = (user: IUser): Permission[] => {
@@ -445,5 +481,16 @@ export const PERMISSIONS = {
     ADMIN: 'system:admin' as Permission,
     CONFIG: 'system:config' as Permission,
     MONITOR: 'system:monitor' as Permission,
+  },
+  MEETING: {
+    READ: 'meeting:read' as Permission,
+    WRITE: 'meeting:write' as Permission,
+    DELETE: 'meeting:delete' as Permission,
+    MANAGE: 'meeting:manage' as Permission,
+  },
+  CONFLICT: {
+    READ: 'conflict:read' as Permission,
+    WRITE: 'conflict:write' as Permission,
+    RESOLVE: 'conflict:resolve' as Permission,
   },
 };

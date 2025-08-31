@@ -15,6 +15,8 @@ import {
   ROLE_PERMISSIONS,
   PERMISSIONS,
   Permission,
+  requireMeetingAccess,
+  requireConflictAccess,
 } from './roleCheck';
 import { IUser } from '../models/User';
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
@@ -489,6 +491,18 @@ describe('Role-Based Access Control (RBAC)', () => {
     });
   });
 
+  describe('Convenience Middleware', () => {
+    it('should create meeting access middleware', () => {
+      const middleware = requireMeetingAccess('meeting:read');
+      expect(typeof middleware).toBe('function');
+    });
+
+    it('should create conflict access middleware', () => {
+      const middleware = requireConflictAccess('conflict:read');
+      expect(typeof middleware).toBe('function');
+    });
+  });
+
   describe('Permission Constants', () => {
     it('should export correct permission constants', () => {
       expect(PERMISSIONS.PROJECT.READ).toBe('project:read');
@@ -526,6 +540,15 @@ describe('Role-Based Access Control (RBAC)', () => {
 
       expect(PERMISSIONS.SYSTEM.ADMIN).toBe('system:admin');
       expect(PERMISSIONS.SYSTEM.CONFIG).toBe('system:config');
+
+      expect(PERMISSIONS.MEETING.READ).toBe('meeting:read');
+      expect(PERMISSIONS.MEETING.WRITE).toBe('meeting:write');
+      expect(PERMISSIONS.MEETING.DELETE).toBe('meeting:delete');
+      expect(PERMISSIONS.MEETING.MANAGE).toBe('meeting:manage');
+
+      expect(PERMISSIONS.CONFLICT.READ).toBe('conflict:read');
+      expect(PERMISSIONS.CONFLICT.WRITE).toBe('conflict:write');
+      expect(PERMISSIONS.CONFLICT.RESOLVE).toBe('conflict:resolve');
     });
   });
 
@@ -535,8 +558,11 @@ describe('Role-Based Access Control (RBAC)', () => {
       expect(studentPermissions).toContain('project:read');
       expect(studentPermissions).toContain('conversation:read');
       expect(studentPermissions).toContain('conversation:write');
+      expect(studentPermissions).toContain('meeting:read');
+      expect(studentPermissions).toContain('conflict:read');
       expect(studentPermissions).not.toContain('project:delete');
       expect(studentPermissions).not.toContain('system:admin');
+      expect(studentPermissions).not.toContain('meeting:manage');
     });
 
     it('should have correct permissions for instructor role', () => {
@@ -545,7 +571,10 @@ describe('Role-Based Access Control (RBAC)', () => {
       expect(instructorPermissions).toContain('persona:manage');
       expect(instructorPermissions).toContain('milestone:evaluate');
       expect(instructorPermissions).toContain('analytics:read');
+      expect(instructorPermissions).toContain('meeting:manage');
+      expect(instructorPermissions).toContain('conflict:resolve');
       expect(instructorPermissions).not.toContain('system:admin');
+      expect(instructorPermissions).not.toContain('meeting:delete');
     });
 
     it('should have correct permissions for administrator role', () => {
@@ -554,6 +583,8 @@ describe('Role-Based Access Control (RBAC)', () => {
       expect(adminPermissions).toContain('user:manage');
       expect(adminPermissions).toContain('system:admin');
       expect(adminPermissions).toContain('system:config');
+      expect(adminPermissions).toContain('meeting:delete');
+      expect(adminPermissions).toContain('conflict:resolve');
     });
   });
 });
