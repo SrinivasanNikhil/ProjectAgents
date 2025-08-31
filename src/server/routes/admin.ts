@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { Types } from 'mongoose';
-import { requireAuth, requireAdministrator } from '../middleware/auth';
+import { requireAuth } from '../middleware/auth';
+import { requireAdministrator } from '../middleware/roleCheck';
 import { analyticsService } from '../services/analyticsService';
 import { validateRequest } from '../middleware/validation';
 import { query } from 'express-validator';

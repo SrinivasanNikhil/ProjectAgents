@@ -3,7 +3,8 @@ import express from 'express';
 import { Types } from 'mongoose';
 import adminRoutes from './admin';
 import { analyticsService } from '../services/analyticsService';
-import { requireAuth, requireAdministrator } from '../middleware/auth';
+import { requireAuth } from '../middleware/auth';
+import { requireAdministrator } from '../middleware/roleCheck';
 
 // Mock the analytics service
 jest.mock('../services/analyticsService');
